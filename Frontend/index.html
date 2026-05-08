@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeamWorks | Custom Lighting</title>
+    <meta name="description" content="Premium minimalist lighting for modern interiors.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body>
+
+    <!-- HERO BANNER -->
+    <header class="hero" id="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h2></h2>
+            <a class="btn" id="hero-cta-btn" href="promotions.html"></a>
+        </div>
+    </header>
+
+    <!-- FEATURED PRODUCTS -->
+    <section class="container">
+        <h3 class="section-title">Featured Pieces</h3>
+        <div id="featured-grid" class="grid product-grid"></div>
+    </section>
+
+    <script>
+        window.onload = async function() {
+            await sharedInit();
+            injectFooter();
+            renderFeatured();
+            await loadHeroFromDB();
+        };
+
+        function renderFeatured() {
+            const container = document.getElementById('featured-grid');
+            const featured = PRODUCTS_DB.filter(p => p.status !== 'sold_out');
+            container.innerHTML = featured.map(p => createProductCard(p)).join('');
+        }
+    </script>
+</body>
+</html>

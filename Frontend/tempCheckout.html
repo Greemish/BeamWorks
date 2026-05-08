@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | BeamWorks</title>
+    <meta name="description" content="Complete your order - BeamWorks.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="shared.js"></script>
+    <style>
+        .temp-checkout-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 120px 20px 60px;
+        }
+        .temp-checkout-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 50px 50px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.06);
+        }
+        .temp-checkout-card h2 {
+            font-size: 0.85rem;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .temp-checkout-card .subtitle {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+        .order-summary-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .order-summary-box h4 {
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            color: var(--text-muted);
+        }
+        .order-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .order-line .item-name { color: var(--text-main); }
+        .order-line .item-qty { color: var(--text-muted); font-size: 11px; margin-left: 6px; }
+        .order-line .item-price { color: var(--accent); font-weight: 500; }
+        .order-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+        .order-total-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .order-total-line .total-price { color: var(--accent); }
+        .wa-input-label {
+            display: block;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+        .wa-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #fff;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        .wa-input:focus { outline: none; border-color: var(--accent); }
+        .wa-hint { font-size: 11px; color: var(--text-muted); margin-bottom: 28px; }
+        .confirm-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--text-main);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        .confirm-btn:hover { background: var(--accent); }
+        .confirm-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
+        .sending-msg {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 14px;
+            display: none;
+        }
+
+        /* Success state */
+        .success-state { display: none; text-align: center; padding: 20px 0; }
+        .success-icon {
+            width: 60px; height: 60px;
+            background: #27ae6015;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 28px;
+        }
+        .success-state h2 { font-size: 0.9rem; letter-spacing: 0.3em; margin-bottom: 12px; }
+        .success-state p { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+        .back-to-shop-btn {
+            display: inline-block;
+            margin-top: 28px;
+            padding: 14px 36px;
+            border: 1px solid var(--text-main);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .back-to-shop-btn:hover { background: var(--text-main); color: #fff; }
+
+        /* Empty cart */
+        .empty-cart-msg { text-align: center; padding: 30px 0; }
+        .empty-cart-msg p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+
+        @media (max-width: 580px) {
+            .temp-checkout-card { padding: 36px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="temp-checkout-wrap">
+        <div class="temp-checkout-card">
+
+            <!-- FORM STATE -->
+            <div id="form-state">
+                <h2>Complete Your Order</h2>
+                <p class="subtitle">No payment needed right now. Leave your WhatsApp number and one of our team members will contact you to confirm your order.</p>
+
+                <!-- Cart Summary -->
+                <div class="order-summary-box" id="order-summary-box">
+                    <h4>Your Order</h4>
+                    <div id="order-lines"></div>
+                    <hr class="order-divider">
+                    <div class="order-total-line">
+                        <span>Subtotal</span>
+                        <span class="total-price" id="order-total">R0.00</span>
+                    </div>
+                </div>
+
+                <!-- Empty cart fallback -->
+                <div class="empty-cart-msg" id="empty-cart-msg" style="display:none;">
+                    <p>Your cart is empty.</p>
+                    <a href="shop.html" class="back-to-shop-btn">Back to Shop</a>
+                </div>
+
+                <!-- WhatsApp Input -->
+                <div id="wa-form">
+                    <label class="wa-input-label" for="wa-number">Your WhatsApp Number</label>
+                    <input class="wa-input" type="tel" id="wa-number" placeholder="+27 123 456 7890" />
+                    <p class="wa-hint">Include your country code. We'll only use this to contact you about your order.</p>
+                    <button class="confirm-btn" id="confirm-btn" onclick="confirmOrder()">Confirm Order</button>
+                    <p class="sending-msg" id="sending-msg">Sending your order... please wait.</p>
+                </div>
+            </div>
+
+            <!-- SUCCESS STATE -->
+            <div class="success-state" id="success-state">
+                <div class="success-icon">✓</div>
+                <h2>Order Received!</h2>
+                <p>Thank you for your order.<br>One of our team members will contact you on WhatsApp shortly to confirm the details and arrange delivery.</p>
+                <a href="shop.html" class="back-to-shop-btn">Continue Shopping</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let cartProducts = [];
+
+        window.onload = async function() {
+            injectNav();
+            await loadProductsFromDB();
+            renderOrderSummary();
+        };
+
+        function renderOrderSummary() {
+            const cart = getCart();
+            const productIds = Object.keys(cart);
+
+            if (productIds.length === 0) {
+                document.getElementById('order-summary-box').style.display = 'none';
+                document.getElementById('wa-form').style.display = 'none';
+                document.getElementById('empty-cart-msg').style.display = 'block';
+                return;
+            }
+
+            let subtotal = 0;
+            cartProducts = [];
+            const lines = productIds.map(id => {
+                const product = PRODUCTS_DB.find(p => p.id === parseInt(id));
+                if (!product) return '';
+                const qty = cart[id];
+                const price = product.price * qty;
+                subtotal += price;
+                cartProducts.push({ name: product.name, qty, unitPrice: product.price });
+                return `
+                    <div class="order-line">
+                        <span><span class="item-name">${product.name}</span><span class="item-qty">x${qty}</span></span>
+                        <span class="item-price">R${price.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('order-lines').innerHTML = lines;
+            document.getElementById('order-total').textContent = 'R' + subtotal.toFixed(2);
+        }
+
+        async function confirmOrder() {
+            const waNumber = document.getElementById('wa-number').value.trim();
+            if (!waNumber) {
+                document.getElementById('wa-number').focus();
+                document.getElementById('wa-number').style.borderColor = '#e74c3c';
+                return;
+            }
+            document.getElementById('wa-number').style.borderColor = '';
+
+            const btn = document.getElementById('confirm-btn');
+            const sendingMsg = document.getElementById('sending-msg');
+            btn.disabled = true;
+            sendingMsg.style.display = 'block';
+
+            // Build the message
+            const cart = getCart();
+            let orderText = '🛍️ New BeamWorks Order!\n\n';
+            orderText += 'Cart:\n';
+            cartProducts.forEach(item => {
+                orderText += `  • ${item.name} x${item.qty} — R${(item.unitPrice * item.qty).toFixed(2)}\n`;
+            });
+            const subtotal = cartProducts.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
+            orderText += `\nSubtotal: R${subtotal.toFixed(2)}\n`;
+            orderText += `\nCustomer WhatsApp: ${waNumber}`;
+
+            // Send via CallMeBot
+            const ownerPhone = window.__ENV && window.__ENV.OWNER_WHATSAPP;
+            const apiKey = window.__ENV && window.__ENV.CALLMEBOT_API_KEY;
+
+            if (ownerPhone && apiKey && apiKey !== 'YOUR_CALLMEBOT_API_KEY') {
+                try {
+                    const encoded = encodeURIComponent(orderText);
+                    await fetch(`https://api.callmebot.com/whatsapp.php?phone=${ownerPhone}&text=${encoded}&apikey=${apiKey}`);
+                } catch (err) {
+                    console.warn('CallMeBot notification failed:', err);
+                    // Don't block the user — still show success
+                }
+            } else {
+                console.warn('CallMeBot not configured. Set OWNER_WHATSAPP and CALLMEBOT_API_KEY in env.js');
+            }
+
+            // Clear cart
+            saveCart({});
+            updateCartCount();
+
+            // Show success
+            document.getElementById('form-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

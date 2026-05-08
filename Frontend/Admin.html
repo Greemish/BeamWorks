@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeamWorks | Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <style>
+        :root {
+            --bg: #F9F7F2;
+            --surface: #FFFFFF;
+            --text-main: #2C2C2C;
+            --text-muted: #8C8C8C;
+            --accent: #D4AF37;
+            --border: rgba(0,0,0,0.08);
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --info: #3498db;
+            --transition: all 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text-main); }
+        h1, h2, h3, h4 { font-weight: 300; letter-spacing: 1px; }
+        button { cursor: pointer; font-family: inherit; }
+
+        /* --- LOGIN SCREEN --- */
+        .login-screen {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #2C2C2C 0%, #444 100%);
+        }
+        .login-card {
+            background: white; padding: 50px 40px; border-radius: 12px; width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+        }
+        .login-card h1 { font-size: 1rem; letter-spacing: 0.4em; margin-bottom: 10px; text-transform: uppercase; }
+        .login-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 30px; }
+        .login-card input {
+            width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 13px; margin-bottom: 15px; font-family: inherit; transition: var(--transition);
+        }
+        .login-card input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.1); }
+        .login-btn {
+            width: 100%; padding: 14px; background: var(--text-main); color: white; border: none;
+            border-radius: 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+            transition: var(--transition);
+        }
+        .login-btn:hover { background: var(--accent); }
+        .login-error { color: var(--danger); font-size: 12px; margin-bottom: 15px; display: none; }
+
+        /* --- ADMIN LAYOUT --- */
+        .admin-layout { display: none; min-height: 100vh; }
+        .admin-layout.active { display: block; }
+
+        /* Hamburger menu - hidden on desktop, shown on mobile via media query */
+        .hamburger-btn { display: none; background: none; border: none; font-size: 28px; cursor: pointer; padding: 5px 10px; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 999; }
+        .sidebar-overlay.active { display: block; }
+
+        /* Mobile header bar - hidden on desktop */
+        .mobile-header { display: none; }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--text-main); color: white; padding: 30px 0; position: fixed;
+            top: 0; left: 0; width: 240px; height: 100vh; overflow-y: auto; z-index: 1001;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-logo { padding: 0 25px 30px; font-size: 0.8rem; letter-spacing: 0.4em; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .sidebar-nav { list-style: none; }
+        .sidebar-nav li {
+            padding: 12px 25px; cursor: pointer; font-size: 13px; letter-spacing: 1px;
+            transition: var(--transition); border-left: 3px solid transparent;
+        }
+        .sidebar-nav li:hover { background: rgba(255,255,255,0.05); }
+        .sidebar-nav li.active { background: rgba(255,255,255,0.08); border-left-color: var(--accent); color: var(--accent); }
+        .sidebar-nav li span { margin-right: 10px; }
+        .sidebar-footer { position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 25px; }
+        .sidebar-footer button {
+            width: 100%; padding: 10px; background: rgba(255,255,255,0.08); color: white;
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; font-size: 11px;
+            letter-spacing: 1px; text-transform: uppercase; transition: var(--transition);
+        }
+        .sidebar-footer button:hover { background: var(--danger); border-color: var(--danger); }
+
+        /* Main content */
+        .main-content { margin-left: 240px; padding: 30px 40px; min-height: 100vh; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .page-header h2 { font-size: 1.8rem; }
+
+        /* --- CARDS --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .stat-card {
+            background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border-left: 4px solid var(--accent);
+        }
+        .stat-card .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+        .stat-card .stat-value { font-size: 2rem; font-weight: 600; }
+
+        /* --- TABLE --- */
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .data-table th { background: var(--text-main); color: white; padding: 14px 20px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        .data-table td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+        .data-table tr:hover td { background: #fafafa; }
+        .data-table img { width: 50px; height: 60px; object-fit: cover; border-radius: 4px; }
+
+        /* --- BADGES --- */
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        .badge-paid { background: #d4edda; color: #155724; }
+        .badge-awaiting { background: #fff3cd; color: #856404; }
+        .badge-fulfilled { background: #cce5ff; color: #004085; }
+
+        /* --- FORMS --- */
+        .form-card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 30px; }
+        .form-card h3 { margin-bottom: 20px; font-size: 1.1rem; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-main); }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 13px; font-family: inherit; transition: var(--transition);
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+
+        /* --- BUTTONS --- */
+        .btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; transition: var(--transition); }
+        .btn-primary { background: var(--text-main); color: white; }
+        .btn-primary:hover { background: var(--accent); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-sm { padding: 6px 14px; font-size: 10px; }
+
+        /* --- IMAGE MANAGEMENT --- */
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+        .image-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 2px solid var(--border); }
+        .image-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .image-thumb .remove-img {
+            position: absolute; top: 4px; right: 4px; background: var(--danger); color: white;
+            border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: 0.2s;
+        }
+        .image-thumb:hover .remove-img { opacity: 1; }
+
+        /* Hero preview */
+        .hero-preview {
+            width: 100%; height: 200px; background: #eee center/cover no-repeat; border-radius: 8px;
+            margin-bottom: 15px; position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .hero-preview-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .hero-preview-text { position: relative; z-index: 2; color: white; font-size: 1.5rem; font-weight: 300; letter-spacing: 2px; }
+
+        /* Toggle switch */
+        .toggle-switch { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0; background: #ccc; border-radius: 26px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            left: 3px; bottom: 3px; background: white; border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: #27ae60; }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+        /* Status banner */
+        .status-banner {
+            padding: 14px 18px; border-radius: 8px; font-size: 13px;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+        }
+        .status-banner.live { background: #eafaf1; border: 1px solid #27ae60; color: #1e8449; }
+        .status-banner.off { background: #fdf2f2; border: 1px solid #e74c3c; color: #c0392b; }
+        .status-banner .status-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        .status-banner.live .status-dot { background: #27ae60; }
+        .status-banner.off .status-dot { background: #e74c3c; }
+
+        /* Step indicator */
+        .setup-steps { display: flex; gap: 0; margin-bottom: 25px; }
+        .setup-step {
+            flex: 1; text-align: center; padding: 12px 10px; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+            background: #f5f5f5; color: var(--text-muted); border-bottom: 3px solid #ddd;
+        }
+        .setup-step:first-child { border-radius: 8px 0 0 0; }
+        .setup-step:last-child { border-radius: 0 8px 0 0; }
+        .setup-step.active { background: white; color: var(--text-main); border-bottom-color: var(--accent); }
+        .setup-step .step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 50%; background: #ddd;
+            color: white; font-size: 10px; margin-right: 6px;
+        }
+        .setup-step.active .step-num { background: var(--accent); }
+
+        /* Collapsible section */
+        .section-collapse { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+        .section-collapse-header {
+            padding: 16px 18px; background: #fafafa; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 600; font-size: 14px; user-select: none;
+        }
+        .section-collapse-header:hover { background: #f0f0f0; }
+        .section-collapse-body { padding: 20px 18px; display: none; }
+        .section-collapse.open .section-collapse-body { display: block; }
+        .section-collapse-arrow { transition: transform 0.2s; font-size: 12px; color: var(--text-muted); }
+        .section-collapse.open .section-collapse-arrow { transform: rotate(180deg); }
+
+        /* Category tags */
+        .category-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: white; border: 1px solid var(--border); border-radius: 20px; font-size: 12px; margin: 4px; }
+        .category-tag button { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 0 2px; }
+        .category-tag button:hover { color: #c0392b; }
+
+        /* Promotion product checkboxes */
+        .promo-product-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+        .promo-product-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        .promo-product-item:last-child { border-bottom: none; }
+        .promo-product-item input[type='checkbox'] { width: 16px; height: 16px; cursor: pointer; }
+        .promo-product-item label { cursor: pointer; flex: 1; }
+        .promo-product-item img { width: 40px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .badge-sold-out { background: #fce4ec; color: #c62828; }
+        .badge-active { background: #e8f5e9; color: #2e7d32; }
+
+        /* --- ORDER DETAIL MODAL --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 12px; padding: 35px; max-width: 600px; width: 90%;
+            max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal h3 { margin-bottom: 20px; }
+        .modal-close { float: right; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .modal-close:hover { color: var(--text-main); }
+
+        /* --- TOAST --- */
+        .toast { position: fixed; bottom: 30px; right: 30px; padding: 14px 24px; background: var(--text-main); color: white; border-radius: 8px; font-size: 13px; z-index: 2000; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+
+        /* Section visibility */
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: 260px; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .hamburger-btn { display: block; }
+            .mobile-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-bottom: 10px; }
+            .mobile-header .hamburger-btn { color: var(--text-main); }
+            .sidebar .hamburger-btn { color: white; }
+            .main-content { margin-left: 0; padding: 20px 16px; }
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .page-header h2 { font-size: 1.4rem; }
+        }
+
+        @media (max-width: 1200px) and (min-width: 769px) {
+            .main-content { padding: 30px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ======================== LOGIN SCREEN ======================== -->
+    <div class="login-screen" id="login-screen">
+        <div class="login-card">
+            <h1>BeamWorks</h1>
+            <p>Admin Dashboard</p>
+            <div class="login-error" id="login-error">Invalid email or password</div>
+            <input type="email" id="login-email" placeholder="Email address" />
+            <input type="password" id="login-password" placeholder="Password" />
+            <button class="login-btn" onclick="handleLogin()">Sign In</button>
+        </div>
+    </div>
+
+    <!-- ======================== ADMIN LAYOUT ======================== -->
+    <div class="admin-layout" id="admin-layout">
+        <!-- Sidebar Overlay (for mobile) -->
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px;">
+                <div class="sidebar-logo" style="margin: 0; border: none; padding: 0;">BeamWorks</div>
+                <button class="hamburger-btn" onclick="toggleSidebar()" style="color: white; font-size: 20px;">✕</button>
+            </div>
+            <ul class="sidebar-nav">
+                <li class="active" onclick="showSection('dashboard'); closeSidebarMobile();"><span>◉</span> Dashboard</li>
+                <li onclick="showSection('categories'); closeSidebarMobile();"><span>📁</span> Categories</li>
+                <li onclick="showSection('products'); closeSidebarMobile();"><span>💡</span> Products</li>
+                <li onclick="showSection('promotions'); closeSidebarMobile();"><span>🏷</span> Promotions & Hero</li>
+                <li onclick="showSection('orders'); closeSidebarMobile();"><span>📦</span> Orders</li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="handleLogout()">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Mobile Header with Hamburger -->
+            <div class="mobile-header">
+                <h2 style="margin: 0; font-size: 1.5rem;">Admin</h2>
+                <button class="hamburger-btn" onclick="toggleSidebar()" id="mobile-hamburger">☰</button>
+            </div>
+
+            <!-- ======== DASHBOARD ======== -->
+            <div class="admin-section active" id="section-dashboard">
+                <div class="page-header"><h2>Dashboard</h2></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Products</div>
+                        <div class="stat-value" id="stat-products">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Orders</div>
+                        <div class="stat-value" id="stat-orders">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Awaiting Shipment</div>
+                        <div class="stat-value" id="stat-awaiting">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Revenue</div>
+                        <div class="stat-value" id="stat-revenue">R0</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 15px;">Recent Orders</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Order #</th><th>Customer</th><th>Total</th><th>Status</th><th>Date</th></tr>
+                    </thead>
+                    <tbody id="dashboard-recent-orders">
+                        <tr><td colspan="5" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ======== CATEGORIES ======== -->
+            <div class="admin-section" id="section-categories">
+                <div class="page-header"><h2>Categories</h2></div>
+                <div class="form-card">
+                    <h3>Manage Categories</h3>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="new-category-input" placeholder="New category name" style="flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;" />
+                        <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
+                    </div>
+                    <div id="categories-list" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+                </div>
+            </div>
+
+            <!-- ======== PRODUCTS ======== -->
+            <div class="admin-section" id="section-products">
+                <div class="page-header">
+                    <h2>Products</h2>
+                    <button class="btn btn-primary" onclick="showProductForm()">+ Add Product</button>
+                </div>
+
+                <!-- Product Form (hidden by default) -->
+                <div class="form-card" id="product-form" style="display: none;">
+                    <h3 id="product-form-title">Add New Product</h3>
+                    <input type="hidden" id="product-edit-id" />
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Product Name *</label>
+                            <input type="text" id="product-name" placeholder="Standing Table Light" />
+                        </div>
+                        <div class="form-group">
+                            <label>Price (R) *</label>
+                            <input type="number" id="product-price" placeholder="295" min="0" step="0.01" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Category *</label>
+                            <select id="product-category"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select id="product-status">
+                                <option value="active">Active</option>
+                                <option value="sold_out">Sold Out</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="product-description" placeholder="A short description of the product..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Product Images</label>
+                        <input type="text" id="product-image-url" placeholder="Enter image URL and click Add" />
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            <button class="btn btn-outline btn-sm" onclick="addProductImageUrl()">Add URL</button>
+                            <input type="file" id="product-image-file" accept="image/*" multiple onchange="handleProductImageUpload(event)" style="font-size: 12px;" />
+                            <small style="color: var(--text-muted); display: block; margin-top: 6px;">Upload up to 5 images. Current: <span id="image-count">0</span>/5</small>
+                        </div>
+                        <div class="image-grid" id="product-images-preview"></div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                        <button class="btn btn-outline" onclick="cancelProductForm()">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Products Table -->
+                <table class="data-table" id="products-table">
+                    <thead>
+                        <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="products-tbody">
+                        <tr><td colspan="6" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ======== PROMOTIONS & HERO ======== -->
+            <div class="admin-section" id="section-promotions">
+                <div class="page-header"><h2>Promotions & Hero Banner</h2></div>
+
+                <!-- Live Status Banner -->
+                <div class="status-banner off" id="promo-status-banner">
+                    <span class="status-dot"></span>
+                    <span id="promo-status-text">Loading...</span>
+                </div>
+
+                <!-- Step Tabs -->
+                <div class="setup-steps">
+                    <div class="setup-step active" onclick="showPromoTab(1)" id="promo-tab-1">
+                        <span class="step-num">1</span> Promotion
+                    </div>
+                    <div class="setup-step" onclick="showPromoTab(2)" id="promo-tab-2">
+                        <span class="step-num">2</span> Hero Banner
+                    </div>
+                </div>
+
+                <!-- TAB 1: Promotion -->
+                <div id="promo-panel-1">
+                    <div class="form-card">
+                        <h3 style="margin-bottom: 5px;">Set up your promotion</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Customers will see discounted prices with the original price crossed out.</p>
+
+                        <div class="form-group">
+                            <label>Promotion Name *</label>
+                            <input type="text" id="promo-name" placeholder='e.g. "Winter Sale" or "New Arrivals"' oninput="updateHeroPreview()" />
+                            <small style="color: var(--text-muted); font-size: 11px;">This name shows on the promotions page. It also becomes the hero heading if you don't set a custom one.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Discount Percentage (%) *</label>
+                            <input type="number" id="promo-discount" placeholder="0" min="0" max="100" step="1" />
+                            <small style="color: var(--text-muted); font-size: 11px;">Set to 0% if you just want to feature products without a discount.</small>
+                        </div>
+
+                        <!-- Product Selection -->
+                        <div class="section-collapse open" id="product-select-collapse">
+                            <div class="section-collapse-header" onclick="toggleCollapse('product-select-collapse')">
+                                <span>Select Products <span id="promo-product-count" style="color: var(--accent); font-weight: normal;">(0 selected)</span></span>
+                                <span class="section-collapse-arrow">▼</span>
+                            </div>
+                            <div class="section-collapse-body">
+                                <div class="promo-product-list" id="promo-product-list"></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="savePromotion()">Save All Changes</button>
+                            <button class="btn btn-outline" onclick="showPromoTab(2)">Next: Hero Banner →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Hero Banner -->
+                <div id="promo-panel-2" style="display: none;">
+                    <div class="form-card">
+                        <!-- Toggle Row -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <h3 style="margin: 0 0 4px 0;">Show Hero on Homepage</h3>
+                                <p style="color: var(--text-muted); font-size: 12px; margin: 0;">The large banner customers see first when they visit your site.</p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="hero-visible-toggle" onchange="updateHeroToggleLabel()" />
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- What it looks like -->
+                        <p style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; font-weight: 600;">Preview</p>
+                        <div class="hero-preview" id="hero-preview">
+                            <div class="hero-preview-overlay"></div>
+                            <div class="hero-preview-text" id="hero-preview-text">Custom Lights</div>
+                        </div>
+
+                        <!-- Appearance Settings -->
+                        <div class="section-collapse open" id="hero-text-collapse">
+                            <div class="section-collapse-header" onclick="toggleCollapse('hero-text-collapse')">
+                                <span>Text & Appearance</span>
+                                <span class="section-collapse-arrow">▼</span>
+                            </div>
+                            <div class="section-collapse-body">
+                                <div class="form-group">
+                                    <label>Heading Text</label>
+                                    <input type="text" id="hero-heading-input" placeholder="Leave blank to use promotion name" oninput="updateHeroPreview()" />
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Text Color</label>
+                                        <input type="color" id="hero-text-color-input" value="#FFFFFF" onchange="updateHeroPreview()" oninput="updateHeroPreview()" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Text Size (px)</label>
+                                        <input type="number" id="hero-text-size-input" placeholder="48" min="12" max="120" onchange="updateHeroPreview()" oninput="updateHeroPreview()" />
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Button Text</label>
+                                    <input type="text" id="hero-button-input" placeholder="View Promotion" oninput="updateHeroPreview()" />
+                                    <small style="color: var(--text-muted); font-size: 11px;">The button takes customers to your promotions page (or collection if no discount is set).</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Settings -->
+                        <div class="section-collapse open" id="hero-image-collapse">
+                            <div class="section-collapse-header" onclick="toggleCollapse('hero-image-collapse')">
+                                <span>Background Image</span>
+                                <span class="section-collapse-arrow">▼</span>
+                            </div>
+                            <div class="section-collapse-body">
+                                <div class="form-group">
+                                    <label>Image URL</label>
+                                    <input type="text" id="hero-image-input" placeholder="Paste a URL or upload below" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Upload Image</label>
+                                    <input type="file" id="hero-image-upload" accept="image/*" onchange="handleHeroImageUpload(event)" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-outline" onclick="showPromoTab(1)">← Back to Promotion</button>
+                            <button class="btn btn-primary" onclick="savePromotion()">Save All Changes</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button class="btn btn-danger btn-sm" onclick="clearPromotion()" style="font-size: 11px;">Clear Entire Promotion</button>
+                        <p style="color: var(--text-muted); font-size: 11px; margin-top: 6px;">This removes the promotion and hides the hero banner.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== ORDERS ======== -->
+            <div class="admin-section" id="section-orders">
+                <div class="page-header"><h2>Orders</h2></div>
+
+                <!-- Filter bar -->
+                <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+                    <button class="btn btn-outline btn-sm" onclick="filterOrders('all')" id="filter-all" style="border-color: var(--accent); color: var(--accent);">All</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterOrders('paid')" id="filter-paid">Paid</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterOrders('awaiting_shipment')" id="filter-awaiting">Awaiting Shipment</button>
+                    <button class="btn btn-outline btn-sm" onclick="filterOrders('fulfilled')" id="filter-fulfilled">Fulfilled</button>
+                </div>
+
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="orders-tbody">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== ORDER DETAIL MODAL ======================== -->
+    <div class="modal-overlay" id="order-modal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeOrderModal()">&times;</button>
+            <h3>Order Details</h3>
+            <div id="order-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ================================================================
+    //  STATE
+    // ================================================================
+    let currentSection = 'dashboard';
+    let productImagesList = []; // temp image URLs while editing a product
+    let allOrders = [];
+    let allProducts = [];
+    let allCategories = [];
+    let currentOrderFilter = 'all';
+    let currentPromotion = null;
+    let promoSelectedProducts = new Set();
+
+    // ================================================================
+    //  AUTH
+    // ================================================================
+    async function handleLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+
+        if (!email || !password) {
+            errorEl.textContent = 'Please enter email and password';
+            errorEl.style.display = 'block';
+            return;
+        }
+
+        console.log('Attempting login with email:', email);
+        console.log('Supabase URL:', window.SUPABASE_URL);
+        console.log('Supabase client exists:', !!window.supabase_client);
+
+        try {
+            if (!window.supabase_client || !window.supabase) {
+                throw new Error('Supabase client not initialized. Check if CDN script and config file loaded.');
+            }
+            const { data, error } = await window.window.supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                console.error('Login error:', error);
+                errorEl.textContent = error.message || 'Login failed';
+                errorEl.style.display = 'block';
+                return;
+            }
+            showAdmin();
+        } catch (err) {
+            console.error('Connection error:', err);
+            errorEl.textContent = 'Connection error: ' + (err.message || 'Check your Supabase config');
+            errorEl.style.display = 'block';
+        }
+    }
+
+    // Allow Enter key to submit login
+    document.getElementById('login-password').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogout() {
+        await window.window.supabase.auth.signOut();
+        document.getElementById('admin-layout').classList.remove('active');
+        document.getElementById('login-screen').style.display = 'flex';
+    }
+
+    async function checkSession() {
+        // Wait for supabase to be defined
+        let attempts = 0;
+        while (!window.supabase_client || !window.supabase) {
+            if (attempts++ > 50) {
+                console.error('Supabase failed to load. Check your credentials.');
+                return;
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+
+        try {
+            const { data: { session } } = await window.window.supabase.auth.getSession();
+            if (session) {
+                showAdmin();
+            }
+        } catch (err) {
+            console.error('Session check error:', err);
+        }
+    }
+
+    function showAdmin() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('admin-layout').classList.add('active');
+        loadDashboard();
+        loadCategories();
+        loadProducts();
+        loadOrders();
+        loadPromotion();
+    }
+
+    // ================================================================
+    //  NAVIGATION
+    // ================================================================
+    function showSection(sectionId) {
+        currentSection = sectionId;
+        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('section-' + sectionId).classList.add('active');
+        document.querySelectorAll('.sidebar-nav li').forEach(li => li.classList.remove('active'));
+        
+        // Find and activate the correct nav item based on sectionId
+        const navItems = {
+            'dashboard': 0,
+            'categories': 1,
+            'products': 2,
+            'promotions': 3,
+            'orders': 4
+        };
+        if (navItems[sectionId] !== undefined) {
+            document.querySelectorAll('.sidebar-nav li')[navItems[sectionId]].classList.add('active');
+        }
+    }
+
+    // ================================================================
+    //  TOAST
+    // ================================================================
+    function showToast(message, type = '') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast show ' + type;
+        setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    // ================================================================
+    //  DASHBOARD
+    // ================================================================
+    async function loadDashboard() {
+        // Product count
+        const { count: productCount } = await window.window.supabase.from('products').select('*', { count: 'exact', head: true });
+        document.getElementById('stat-products').textContent = productCount || 0;
+
+        // Order count
+        const { count: orderCount } = await window.window.supabase.from('orders').select('*', { count: 'exact', head: true });
+        document.getElementById('stat-orders').textContent = orderCount || 0;
+
+        // Awaiting shipment
+        const { count: awaitingCount } = await window.window.supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'awaiting_shipment');
+        document.getElementById('stat-awaiting').textContent = awaitingCount || 0;
+
+        // Revenue (all fulfilled orders)
+        const { data: revenueData } = await window.window.supabase.from('orders').select('total');
+        const totalRevenue = (revenueData || []).reduce((sum, o) => sum + parseFloat(o.total), 0);
+        document.getElementById('stat-revenue').textContent = 'R' + totalRevenue.toFixed(2);
+
+        // Recent orders (last 5)
+        const { data: recent } = await supabase
+            .from('orders')
+            .select('*, customer_info(*)')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const tbody = document.getElementById('dashboard-recent-orders');
+        if (!recent || recent.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No orders yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = recent.map(o => `
+            <tr>
+                <td>#${o.id}</td>
+                <td>${o.customer_info ? o.customer_info.first_name + ' ' + o.customer_info.last_name : 'N/A'}</td>
+                <td>R${parseFloat(o.total).toFixed(2)}</td>
+                <td>${statusBadge(o.status)}</td>
+                <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            </tr>
+        `).join('');
+    }
+
+    function statusBadge(status) {
+        const map = {
+            'paid': '<span class="badge badge-paid">Paid</span>',
+            'awaiting_shipment': '<span class="badge badge-awaiting">Awaiting Shipment</span>',
+            'fulfilled': '<span class="badge badge-fulfilled">Fulfilled</span>'
+        };
+        return map[status] || status;
+    }
+
+    // ================================================================
+    //  HERO SETTINGS (integrated with promotions)
+    // ================================================================
+    let heroImageFile = null; // Store file temporarily for upload on save
+
+    async function loadHeroSettings() {
+        const { data } = await window.window.supabase.from('site_settings').select('*');
+        if (!data) return;
+
+        const settings = {};
+        data.forEach(s => { settings[s.setting_key] = s.setting_value; });
+
+        document.getElementById('hero-heading-input').value = settings.hero_heading || '';
+        document.getElementById('hero-button-input').value = settings.hero_button_text || '';
+        document.getElementById('hero-image-input').value = settings.hero_image_url || '';
+        document.getElementById('hero-text-color-input').value = settings.hero_text_color || '#FFFFFF';
+        document.getElementById('hero-text-size-input').value = settings.hero_text_size || '48';
+        document.getElementById('hero-visible-toggle').checked = settings.hero_visible === 'true';
+        updateHeroToggleLabel();
+        heroImageFile = null;
+        updateHeroPreview();
+    }
+
+    function updateHeroToggleLabel() {
+        // Update the status banner to reflect toggle change
+        updateStatusBanner();
+    }
+
+    function updateStatusBanner() {
+        const banner = document.getElementById('promo-status-banner');
+        const statusText = document.getElementById('promo-status-text');
+        const heroOn = document.getElementById('hero-visible-toggle')?.checked;
+        const hasPromo = currentPromotion && currentPromotion.discount_percentage > 0;
+
+        let parts = [];
+        if (hasPromo) {
+            parts.push(`<strong>${escapeHtml(currentPromotion.name)}</strong> — ${currentPromotion.discount_percentage}% off on ${promoSelectedProducts.size} product(s)`);
+        } else {
+            parts.push('No active discount');
+        }
+        if (heroOn) {
+            parts.push('Hero banner is <strong>visible</strong> on homepage');
+            banner.className = 'status-banner live';
+        } else {
+            parts.push('Hero banner is <strong>hidden</strong>');
+            banner.className = hasPromo ? 'status-banner live' : 'status-banner off';
+        }
+        statusText.innerHTML = parts.join(' · ');
+    }
+
+    function updateHeroPreview() {
+        const heroHeading = document.getElementById('hero-heading-input').value;
+        const promoName = document.getElementById('promo-name').value;
+        const heading = heroHeading || promoName || 'Promotion';
+        const imageUrl = document.getElementById('hero-image-input').value || '';
+        const textColor = document.getElementById('hero-text-color-input').value || '#FFFFFF';
+        const textSize = document.getElementById('hero-text-size-input').value || '48';
+        document.getElementById('hero-preview').style.backgroundImage = `url('${imageUrl}')`;
+        document.getElementById('hero-preview-text').textContent = heading;
+        document.getElementById('hero-preview-text').style.color = textColor;
+        document.getElementById('hero-preview-text').style.fontSize = textSize + 'px';
+    }
+
+    async function handleHeroImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        heroImageFile = file;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('hero-preview').style.backgroundImage = `url('${e.target.result}')`;
+            showToast('Preview ready. Click Save to upload.', 'info');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function saveHeroSettings() {
+        const heading = document.getElementById('hero-heading-input').value.trim();
+        const buttonText = document.getElementById('hero-button-input').value.trim();
+        let imageUrl = document.getElementById('hero-image-input').value.trim();
+        const textColor = document.getElementById('hero-text-color-input').value.trim();
+        const textSize = document.getElementById('hero-text-size-input').value.trim();
+
+        if (textSize && isNaN(parseInt(textSize))) {
+            showToast('Hero Text Size must be a number', 'error');
+            return false;
+        }
+
+        if (heroImageFile) {
+            try {
+                const bucketName = (window.__ENV && window.__ENV.SUPABASE_STORAGE_BUCKET) || 'BeamWorksImages';
+                const fileName = 'hero_' + Date.now() + '_' + heroImageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const { data, error } = await window.supabase.storage.from(bucketName).upload(fileName, heroImageFile);
+
+                if (error) {
+                    showToast('Image upload failed: ' + error.message, 'error');
+                    console.error('Hero upload error:', error);
+                    return false;
+                }
+
+                const { data: urlData } = window.supabase.storage.from(bucketName).getPublicUrl(fileName);
+                imageUrl = urlData.publicUrl;
+                heroImageFile = null;
+            } catch (err) {
+                showToast('Upload error: ' + err.message, 'error');
+                return false;
+            }
+        }
+
+        const updates = [
+            { setting_key: 'hero_heading', setting_value: heading },
+            { setting_key: 'hero_button_text', setting_value: buttonText },
+            { setting_key: 'hero_image_url', setting_value: imageUrl },
+            { setting_key: 'hero_text_color', setting_value: textColor },
+            { setting_key: 'hero_text_size', setting_value: textSize },
+            { setting_key: 'hero_visible', setting_value: document.getElementById('hero-visible-toggle').checked ? 'true' : 'false' }
+        ];
+
+        for (const update of updates) {
+            const { error } = await supabase
+                .from('site_settings')
+                .upsert({ setting_key: update.setting_key, setting_value: update.setting_value }, { onConflict: 'setting_key' });
+            if (error) {
+                showToast('Error saving hero: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // ================================================================
+    //  CATEGORIES
+    // ================================================================
+    async function loadCategories() {
+        const { data, error } = await supabase.from('categories').select('*').order('name');
+        if (error) { showToast('Error loading categories', 'error'); return; }
+        allCategories = data || [];
+        renderCategories();
+        populateCategoryDropdown();
+    }
+
+    function renderCategories() {
+        const container = document.getElementById('categories-list');
+        if (allCategories.length === 0) {
+            container.innerHTML = '<span style="color:var(--text-muted);">No categories yet.</span>';
+            return;
+        }
+        container.innerHTML = allCategories.map(c => `
+            <span class="category-tag">
+                ${escapeHtml(c.name)}
+                <button onclick="deleteCategory(${c.id}, '${escapeHtml(c.name)}')">&times;</button>
+            </span>
+        `).join('');
+    }
+
+    function populateCategoryDropdown() {
+        const select = document.getElementById('product-category');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">Select Category</option>' +
+            allCategories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+        if (currentVal) select.value = currentVal;
+    }
+
+    async function addCategory() {
+        const input = document.getElementById('new-category-input');
+        const name = input.value.trim();
+        if (!name) { showToast('Enter a category name', 'error'); return; }
+        const { error } = await supabase.from('categories').insert({ name });
+        if (error) { showToast('Error: ' + error.message, 'error'); return; }
+        input.value = '';
+        showToast('Category added!', 'success');
+        loadCategories();
+    }
+
+    async function deleteCategory(id, name) {
+        if (!confirm('Delete category "' + name + '"? Products in this category won\'t be deleted.')) return;
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) { showToast('Error: ' + error.message, 'error'); return; }
+        showToast('Category deleted', 'success');
+        loadCategories();
+    }
+
+    // ================================================================
+    //  PRODUCTS
+    // ================================================================
+    async function loadProducts() {
+        const { data: products, error } = await supabase
+            .from('products')
+            .select('*, product_images(*)')
+            .order('created_at', { ascending: false });
+
+        if (error) { showToast('Error loading products', 'error'); return; }
+        allProducts = products || [];
+
+        const tbody = document.getElementById('products-tbody');
+        if (allProducts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No products yet. Add your first product!</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = allProducts.map(p => {
+            const sortedImages = (p.product_images || []).sort((a, b) => a.display_order - b.display_order);
+            const thumb = sortedImages.length > 0 ? sortedImages[0].image_url : '';
+            const statusBadgeHtml = p.status === 'sold_out' 
+                ? '<span class="badge badge-sold-out">Sold Out</span>' 
+                : '<span class="badge badge-active">Active</span>';
+            return `
+                <tr>
+                    <td>${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.name)}">` : '<span style="color:var(--text-muted);">No img</span>'}</td>
+                    <td><strong>${escapeHtml(p.name)}</strong></td>
+                    <td>${escapeHtml(p.category)}</td>
+                    <td>R${parseFloat(p.price).toFixed(2)}</td>
+                    <td>${statusBadgeHtml}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function showProductForm(product = null) {
+        populateCategoryDropdown();
+        document.getElementById('product-form').style.display = 'block';
+        document.getElementById('product-form-title').textContent = product ? 'Edit Product' : 'Add New Product';
+        document.getElementById('product-edit-id').value = product ? product.id : '';
+        document.getElementById('product-name').value = product ? product.name : '';
+        document.getElementById('product-price').value = product ? product.price : '';
+        document.getElementById('product-category').value = product ? product.category : '';
+        document.getElementById('product-status').value = product ? (product.status || 'active') : 'active';
+        document.getElementById('product-description').value = product ? (product.description || '') : '';
+
+        if (product && product.product_images) {
+            productImagesList = product.product_images
+                .sort((a, b) => a.display_order - b.display_order)
+                .map(img => img.image_url);
+        } else {
+            productImagesList = [];
+        }
+        renderProductImages();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelProductForm() {
+        document.getElementById('product-form').style.display = 'none';
+        productImagesList = [];
+        updateImageCount();
+    }
+
+    async function editProduct(id) {
+        const product = allProducts.find(p => p.id === id);
+        if (product) showProductForm(product);
+    }
+
+    function addProductImageUrl() {
+        const url = document.getElementById('product-image-url').value.trim();
+        if (!url) return;
+        productImagesList.push(url);
+        document.getElementById('product-image-url').value = '';
+        renderProductImages();
+    }
+
+    async function handleProductImageUpload(event) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        const maxImages = 5;
+        const totalImages = productImagesList.length + files.length;
+
+        if (totalImages > maxImages) {
+            showToast(`Can only upload up to ${maxImages} images total. You have ${productImagesList.length}, trying to add ${files.length}.`, 'error');
+            event.target.value = '';
+            return;
+        }
+
+        let uploadedCount = 0;
+        const bucketName = (window.__ENV && window.__ENV.SUPABASE_STORAGE_BUCKET) || 'BeamWorksImages';
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileName = 'product_' + Date.now() + '_' + i + '_' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const { data, error } = await window.supabase.storage.from(bucketName).upload(fileName, file);
+
+            if (error) {
+                showToast('Upload failed for ' + file.name + ': ' + error.message, 'error');
+                console.error('Upload error:', error);
+                continue;
+            }
+
+            const { data: urlData } = window.supabase.storage.from(bucketName).getPublicUrl(fileName);
+            productImagesList.push(urlData.publicUrl);
+            uploadedCount++;
+        }
+
+        renderProductImages();
+        updateImageCount();
+        if (uploadedCount > 0) {
+            showToast(`${uploadedCount} image(s) uploaded!`, 'success');
+        }
+        event.target.value = '';
+    }
+
+    function updateImageCount() {
+        const countEl = document.getElementById('image-count');
+        if (countEl) countEl.textContent = productImagesList.length;
+    }
+
+    function removeProductImage(index) {
+        productImagesList.splice(index, 1);
+        renderProductImages();
+    }
+
+    function renderProductImages() {
+        const container = document.getElementById('product-images-preview');
+        container.innerHTML = productImagesList.map((url, idx) => `
+            <div class="image-thumb">
+                <img src="${escapeHtml(url)}" alt="Product image ${idx + 1}" />
+                <button class="remove-img" onclick="removeProductImage(${idx})">&times;</button>
+            </div>
+        `).join('');
+        updateImageCount();
+    }
+
+    async function saveProduct() {
+        const id = document.getElementById('product-edit-id').value;
+        const name = document.getElementById('product-name').value.trim();
+        const price = parseFloat(document.getElementById('product-price').value);
+        const category = document.getElementById('product-category').value;
+        const status = document.getElementById('product-status').value;
+        const description = document.getElementById('product-description').value.trim();
+
+        if (!name || isNaN(price) || !category) {
+            showToast('Please fill in Name, Price and Category', 'error');
+            return;
+        }
+
+        const productData = { name, price, category, status, description };
+
+        let productId;
+
+        if (id) {
+            // UPDATE existing product
+            const { error } = await window.window.supabase.from('products').update(productData).eq('id', id);
+            if (error) { showToast('Error updating: ' + error.message, 'error'); return; }
+            productId = parseInt(id);
+
+            // Delete old images then re-insert
+            await window.window.supabase.from('product_images').delete().eq('product_id', productId);
+        } else {
+            // CREATE new product
+            const { data, error } = await window.window.supabase.from('products').insert(productData).select().single();
+            if (error) { showToast('Error creating: ' + error.message, 'error'); return; }
+            productId = data.id;
+        }
+
+        // Insert images
+        if (productImagesList.length > 0) {
+            const imageRows = productImagesList.map((url, idx) => ({
+                product_id: productId,
+                image_url: url,
+                display_order: idx
+            }));
+            const { error: imgError } = await window.window.supabase.from('product_images').insert(imageRows);
+            if (imgError) { showToast('Product saved but images failed: ' + imgError.message, 'error'); }
+        }
+
+        showToast(id ? 'Product updated!' : 'Product created!', 'success');
+        cancelProductForm();
+        loadProducts();
+        loadDashboard();
+    }
+
+    async function deleteProduct(id) {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        const { error } = await window.window.supabase.from('products').delete().eq('id', id);
+        if (error) { showToast('Error deleting: ' + error.message, 'error'); return; }
+        showToast('Product deleted', 'success');
+        loadProducts();
+        loadDashboard();
+    }
+
+    // ================================================================
+    //  ORDERS
+    // ================================================================
+    async function loadOrders() {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*, customer_info(*), order_items(*)')
+            .order('created_at', { ascending: false });
+
+        if (error) { showToast('Error loading orders', 'error'); return; }
+        allOrders = data || [];
+        renderOrders();
+    }
+
+    function filterOrders(status) {
+        currentOrderFilter = status;
+        // Update filter button styles
+        document.querySelectorAll('[id^="filter-"]').forEach(btn => {
+            btn.style.borderColor = 'var(--border)';
+            btn.style.color = 'var(--text-main)';
+        });
+        const activeBtn = document.getElementById('filter-' + (status === 'awaiting_shipment' ? 'awaiting' : status));
+        if (activeBtn) {
+            activeBtn.style.borderColor = 'var(--accent)';
+            activeBtn.style.color = 'var(--accent)';
+        }
+        renderOrders();
+    }
+
+    function renderOrders() {
+        const filtered = currentOrderFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentOrderFilter);
+        const tbody = document.getElementById('orders-tbody');
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No orders found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(o => {
+            const customer = o.customer_info;
+            const itemCount = (o.order_items || []).reduce((sum, item) => sum + item.quantity, 0);
+            return `
+                <tr>
+                    <td><strong>#${o.id}</strong></td>
+                    <td>${customer ? escapeHtml(customer.first_name + ' ' + customer.last_name) : 'N/A'}</td>
+                    <td>${itemCount} item${itemCount !== 1 ? 's' : ''}</td>
+                    <td>R${parseFloat(o.total).toFixed(2)}</td>
+                    <td>${statusBadge(o.status)}</td>
+                    <td>${new Date(o.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm" onclick="viewOrder(${o.id})">View</button>
+                        <select onchange="updateOrderStatus(${o.id}, this.value)" style="padding: 5px 8px; font-size: 11px; border: 1px solid var(--border); border-radius: 4px;">
+                            <option value="paid" ${o.status === 'paid' ? 'selected' : ''}>Paid</option>
+                            <option value="awaiting_shipment" ${o.status === 'awaiting_shipment' ? 'selected' : ''}>Awaiting Shipment</option>
+                            <option value="fulfilled" ${o.status === 'fulfilled' ? 'selected' : ''}>Fulfilled</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+        const { error } = await window.window.supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+        if (error) {
+            showToast('Failed to update status', 'error');
+            return;
+        }
+        showToast('Order #' + orderId + ' → ' + newStatus.replace('_', ' '), 'success');
+        // Update local data
+        const order = allOrders.find(o => o.id === orderId);
+        if (order) order.status = newStatus;
+        loadDashboard();
+    }
+
+    function viewOrder(orderId) {
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) return;
+
+        const customer = order.customer_info;
+        const items = order.order_items || [];
+
+        let html = `
+            <div style="margin-bottom: 20px;">
+                <strong>Order #${order.id}</strong> · ${new Date(order.created_at).toLocaleString()}
+                <br>${statusBadge(order.status)}
+            </div>
+
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Customer</strong>
+                <p style="margin-top: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+                    ${customer ? escapeHtml(customer.first_name + ' ' + customer.last_name) : 'N/A'}<br>
+                    ${customer ? escapeHtml(customer.email) : ''}<br>
+                    ${customer ? escapeHtml(customer.phone || '') : ''}<br>
+                    ${customer ? escapeHtml([customer.address, customer.suburb, customer.city, customer.province, customer.postal_code].filter(Boolean).join(', ')) : ''}
+                </p>
+            </div>
+
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                <strong style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Items</strong>
+                <table style="width: 100%; margin-top: 10px; font-size: 13px;">
+                    ${items.map(item => `
+                        <tr>
+                            <td style="padding: 5px 0;">${escapeHtml(item.product_name)} × ${item.quantity}</td>
+                            <td style="padding: 5px 0; text-align: right;">R${parseFloat(item.total_price).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                    <tr style="border-top: 1px solid var(--border);">
+                        <td style="padding: 5px 0; color: var(--text-muted);">Shipping</td>
+                        <td style="padding: 5px 0; text-align: right;">R${parseFloat(order.shipping_cost).toFixed(2)}</td>
+                    </tr>
+                    <tr style="border-top: 1px solid var(--border); font-weight: bold;">
+                        <td style="padding: 8px 0;">Total</td>
+                        <td style="padding: 8px 0; text-align: right; color: var(--accent);">R${parseFloat(order.total).toFixed(2)}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <select id="modal-status-select" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; flex: 1;">
+                    <option value="paid" ${order.status === 'paid' ? 'selected' : ''}>Paid</option>
+                    <option value="awaiting_shipment" ${order.status === 'awaiting_shipment' ? 'selected' : ''}>Awaiting Shipment</option>
+                    <option value="fulfilled" ${order.status === 'fulfilled' ? 'selected' : ''}>Fulfilled</option>
+                </select>
+                <button class="btn btn-primary" onclick="updateOrderStatusFromModal(${order.id})">Update Status</button>
+            </div>
+        `;
+
+        document.getElementById('order-modal-content').innerHTML = html;
+        document.getElementById('order-modal').classList.add('active');
+    }
+
+    async function updateOrderStatusFromModal(orderId) {
+        const newStatus = document.getElementById('modal-status-select').value;
+        await updateOrderStatus(orderId, newStatus);
+        renderOrders();
+        closeOrderModal();
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').classList.remove('active');
+    }
+
+    // Close modal on overlay click
+    document.getElementById('order-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeOrderModal();
+    });
+
+    // ================================================================
+    //  PROMOTIONS
+    // ================================================================
+    async function loadPromotion() {
+        const { data, error } = await supabase
+            .from('promotions')
+            .select('*, promotion_products(product_id)')
+            .eq('is_active', true)
+            .limit(1)
+            .single();
+
+        if (error || !data) {
+            currentPromotion = null;
+            renderPromotionForm();
+            loadHeroSettings();
+            return;
+        }
+
+        currentPromotion = data;
+        promoSelectedProducts = new Set((data.promotion_products || []).map(pp => pp.product_id));
+        renderPromotionForm();
+        loadHeroSettings();
+    }
+
+    function renderPromotionForm() {
+        // Update status banner
+        updateStatusBanner();
+
+        // Fill form values
+        document.getElementById('promo-name').value = currentPromotion ? currentPromotion.name : '';
+        document.getElementById('promo-discount').value = currentPromotion ? currentPromotion.discount_percentage : 0;
+
+        // Render product checklist
+        const container = document.getElementById('promo-product-list');
+        const activeProducts = allProducts.filter(p => p.status !== 'sold_out');
+        if (activeProducts.length === 0) {
+            container.innerHTML = '<span style="color:var(--text-muted); padding: 10px;">No active products available. Add products first.</span>';
+            updateProductCount();
+            return;
+        }
+        container.innerHTML = activeProducts.map(p => {
+            const sortedImages = (p.product_images || []).sort((a, b) => a.display_order - b.display_order);
+            const thumb = sortedImages.length > 0 ? sortedImages[0].image_url : '';
+            const checked = promoSelectedProducts.has(p.id) ? 'checked' : '';
+            return `
+                <div class="promo-product-item">
+                    <input type="checkbox" id="promo-p-${p.id}" ${checked} onchange="togglePromoProduct(${p.id})" />
+                    ${thumb ? `<img src="${escapeHtml(thumb)}" />` : ''}
+                    <label for="promo-p-${p.id}">${escapeHtml(p.name)} — R${parseFloat(p.price).toFixed(2)}</label>
+                </div>
+            `;
+        }).join('');
+        updateProductCount();
+    }
+
+    function updateProductCount() {
+        const countEl = document.getElementById('promo-product-count');
+        if (countEl) countEl.textContent = `(${promoSelectedProducts.size} selected)`;
+    }
+
+    function togglePromoProduct(productId) {
+        if (promoSelectedProducts.has(productId)) {
+            promoSelectedProducts.delete(productId);
+        } else {
+            promoSelectedProducts.add(productId);
+        }
+        updateProductCount();
+    }
+
+    function showPromoTab(tab) {
+        document.getElementById('promo-panel-1').style.display = tab === 1 ? 'block' : 'none';
+        document.getElementById('promo-panel-2').style.display = tab === 2 ? 'block' : 'none';
+        document.getElementById('promo-tab-1').classList.toggle('active', tab === 1);
+        document.getElementById('promo-tab-2').classList.toggle('active', tab === 2);
+    }
+
+    function toggleCollapse(id) {
+        document.getElementById(id).classList.toggle('open');
+    }
+
+    async function savePromotion() {
+        const name = document.getElementById('promo-name').value.trim();
+        const discount = parseInt(document.getElementById('promo-discount').value);
+
+        if (!name) { showToast('Enter a promotion name', 'error'); showPromoTab(1); return; }
+        if (isNaN(discount) || discount < 0 || discount > 100) { showToast('Discount must be 0-100', 'error'); showPromoTab(1); return; }
+
+        // Save hero settings first
+        const heroSaved = await saveHeroSettings();
+        if (heroSaved === false) return;
+
+        // Deactivate all existing promotions
+        await supabase.from('promotions').update({ is_active: false }).eq('is_active', true);
+
+        // Create new promotion
+        const { data: promo, error } = await supabase
+            .from('promotions')
+            .insert({ name, discount_percentage: discount, is_active: true })
+            .select()
+            .single();
+
+        if (error) { showToast('Error creating promotion: ' + error.message, 'error'); return; }
+
+        // Insert selected products
+        if (promoSelectedProducts.size > 0) {
+            const rows = Array.from(promoSelectedProducts).map(pid => ({
+                promotion_id: promo.id,
+                product_id: pid
+            }));
+            const { error: ppError } = await supabase.from('promotion_products').insert(rows);
+            if (ppError) { showToast('Promotion saved but product linking failed: ' + ppError.message, 'error'); }
+        }
+
+        showToast('Saved successfully!', 'success');
+        loadPromotion();
+    }
+
+    async function clearPromotion() {
+        if (!confirm('This will remove the promotion and hide the hero banner. Continue?')) return;
+
+        // Deactivate all promotions
+        await supabase.from('promotions').update({ is_active: false }).eq('is_active', true);
+
+        // Create a default 0% promotion
+        await supabase.from('promotions').insert({ name: 'No Promotion', discount_percentage: 0, is_active: true });
+
+        // Turn off hero
+        await supabase.from('site_settings').upsert({ setting_key: 'hero_visible', setting_value: 'false' }, { onConflict: 'setting_key' });
+
+        promoSelectedProducts.clear();
+        document.getElementById('hero-visible-toggle').checked = false;
+        updateHeroToggleLabel();
+        showToast('Promotion cleared', 'success');
+        loadPromotion();
+    }
+
+    // ================================================================
+    //  UTILITIES
+    // ================================================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('mobile-open');
+        overlay.classList.toggle('active');
+    }
+
+    function closeSidebarMobile() {
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+    }
+
+    // ================================================================
+    //  INIT
+    // ================================================================
+    checkSession();
+    </script>
+</body>
+</html>

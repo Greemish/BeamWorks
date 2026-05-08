@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | BeamWorks</title>
+    <meta name="description" content="Complete your purchase - BeamWorks.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body>
+
+    <div class="checkout-page-content">
+        <div class="container" style="padding-top: 100px;">
+            <button class="back-button" onclick="history.back()">← Back to Shop</button>
+        </div>
+
+        <!-- Checkout Header -->
+        <div class="checkout-header">
+            <div class="checkout-header-left">
+                <button class="order-summary-toggle" onclick="toggleOrderSummary()">Order Summary ▼</button>
+            </div>
+            <div class="checkout-header-right">
+                <span class="checkout-total-label">Total</span>
+                <span class="checkout-total-price" id="checkout-total">R0.00</span>
+            </div>
+        </div>
+
+        <!-- Order Summary Full Display -->
+        <div class="checkout-order-summary hidden" id="order-summary-full">
+            <div id="checkout-summary-items"></div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="checkout-progress">
+            <span class="progress-step active" onclick="goToCheckoutStep(1)">Information</span>
+            <span class="progress-divider">&gt;</span>
+            <span class="progress-step" onclick="goToCheckoutStep(2)">Shipping</span>
+            <span class="progress-divider">&gt;</span>
+            <span class="progress-step" onclick="goToCheckoutStep(3)">Payment</span>
+        </div>
+
+        <div class="checkout-container">
+            <!-- STEP 1: INFORMATION -->
+            <div class="checkout-step" id="checkout-step-1">
+                <h2>Contact Information</h2>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="contact-email" placeholder="john@example.com" />
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="tel" id="contact-phone" placeholder="+27 123 456 7890" />
+                </div>
+
+                <h3 style="margin-top: 40px;">Shipping Address</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name *</label>
+                        <input type="text" id="shipping-first-name" placeholder="John" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name *</label>
+                        <input type="text" id="shipping-last-name" placeholder="Doe" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Address *</label>
+                    <input type="text" id="shipping-address" placeholder="123 Main Street" />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Suburb</label>
+                        <input type="text" id="shipping-suburb" placeholder="Suburb" />
+                    </div>
+                    <div class="form-group">
+                        <label>City *</label>
+                        <input type="text" id="shipping-city" placeholder="Cape Town" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Province *</label>
+                        <select id="shipping-province">
+                            <option value="">Select Province</option>
+                            <option value="EC">Eastern Cape</option>
+                            <option value="FS">Free State</option>
+                            <option value="GP">Gauteng</option>
+                            <option value="KZN">KwaZulu-Natal</option>
+                            <option value="LP">Limpopo</option>
+                            <option value="MP">Mpumalanga</option>
+                            <option value="NC">Northern Cape</option>
+                            <option value="NW">North West</option>
+                            <option value="WC">Western Cape</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Postal Code *</label>
+                        <input type="text" id="shipping-postal-code" placeholder="8000" />
+                    </div>
+                </div>
+
+                <button class="btn" style="width: 100%; margin-top: 40px;" onclick="goToCheckoutStep(2)">Continue to Shipping</button>
+            </div>
+
+            <!-- STEP 2: SHIPPING -->
+            <div class="checkout-step hidden" id="checkout-step-2">
+                <h2>Shipping</h2>
+
+                <div class="summary-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Contact Details</h3>
+                        <a href="javascript:void(0)" onclick="goToCheckoutStep(1)" class="edit-link">✎ Edit</a>
+                    </div>
+                    <div class="summary-info">
+                        <p id="summary-email"></p>
+                        <p id="summary-phone"></p>
+                    </div>
+                </div>
+
+                <div class="summary-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Ship To</h3>
+                        <a href="javascript:void(0)" onclick="goToCheckoutStep(1)" class="edit-link">✎ Edit</a>
+                    </div>
+                    <div class="summary-info">
+                        <p id="summary-address"></p>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 40px;">Shipping Method</h3>
+                <div class="shipping-method-option">
+                    <div style="flex: 1;">
+                        <p style="font-weight: bold; margin-bottom: 5px;">Standard Shipping</p>
+                        <p style="color: var(--text-muted); font-size: 13px;">2-7 days</p>
+                    </div>
+                    <div style="font-weight: bold; color: var(--accent);">R50</div>
+                </div>
+
+                <button class="btn" style="width: 100%; margin-top: 40px;" onclick="goToCheckoutStep(3)">Continue to Payment</button>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="javascript:void(0)" onclick="goToCheckoutStep(1)" class="return-link">Return to Information</a>
+                </div>
+            </div>
+
+            <!-- STEP 3: PAYMENT -->
+            <div class="checkout-step hidden" id="checkout-step-3">
+                <h2>Review & Pay</h2>
+
+                <div class="summary-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Contact Details</h3>
+                        <a href="javascript:void(0)" onclick="goToCheckoutStep(1)" class="edit-link">✎ Edit</a>
+                    </div>
+                    <div class="summary-info">
+                        <p id="summary-email-payment"></p>
+                        <p id="summary-phone-payment"></p>
+                    </div>
+                </div>
+
+                <div class="summary-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>Ship To</h3>
+                        <a href="javascript:void(0)" onclick="goToCheckoutStep(1)" class="edit-link">✎ Edit</a>
+                    </div>
+                    <div class="summary-info">
+                        <p id="summary-address-payment"></p>
+                    </div>
+                </div>
+
+                <div class="summary-section">
+                    <h3>Shipping Method</h3>
+                    <div class="summary-info">
+                        <div style="display: flex; justify-content: space-between;">
+                            <p>Standard Shipping (2-7 days)</p>
+                            <p style="color: var(--accent); font-weight: bold;">R50</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 40px;">Payment</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">✓ All transactions are secure and encrypted</p>
+
+                <div class="form-group">
+                    <label style="margin-bottom: 20px;">Select Payment Method *</label>
+                    <div class="payment-option">
+                        <input type="radio" name="payment-method" value="peach" id="payment-peach" onchange="updatePaymentMethod('peach')" />
+                        <label for="payment-peach" style="margin: 0; cursor: pointer;">Peach Payments</label>
+                    </div>
+                    <div class="payment-option">
+                        <input type="radio" name="payment-method" value="payflex" id="payment-payflex" onchange="updatePaymentMethod('payflex')" />
+                        <label for="payment-payflex" style="margin: 0; cursor: pointer;">Payflex</label>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 40px;">Billing Address</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Select the address that matches your card or payment method</p>
+
+                <div class="form-group">
+                    <div class="billing-option">
+                        <input type="radio" name="billing-address" value="same" id="billing-same" checked onchange="toggleBillingAddressForm()" />
+                        <label for="billing-same" style="margin: 0; cursor: pointer;">Same as shipping address</label>
+                    </div>
+                    <div class="billing-option">
+                        <input type="radio" name="billing-address" value="different" id="billing-different" onchange="toggleBillingAddressForm()" />
+                        <label for="billing-different" style="margin: 0; cursor: pointer;">Use a different billing address</label>
+                    </div>
+                </div>
+
+                <div id="billing-form-container" class="hidden" style="margin-top: 30px;">
+                    <h4 style="margin-bottom: 20px;">Enter Billing Address</h4>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" id="billing-first-name" placeholder="John" />
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name *</label>
+                            <input type="text" id="billing-last-name" placeholder="Doe" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Address *</label>
+                        <input type="text" id="billing-address" placeholder="123 Main Street" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Suburb</label>
+                            <input type="text" id="billing-suburb" placeholder="Suburb" />
+                        </div>
+                        <div class="form-group">
+                            <label>City *</label>
+                            <input type="text" id="billing-city" placeholder="Cape Town" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Province *</label>
+                            <select id="billing-province">
+                                <option value="">Select Province</option>
+                                <option value="EC">Eastern Cape</option>
+                                <option value="FS">Free State</option>
+                                <option value="GP">Gauteng</option>
+                                <option value="KZN">KwaZulu-Natal</option>
+                                <option value="LP">Limpopo</option>
+                                <option value="MP">Mpumalanga</option>
+                                <option value="NC">Northern Cape</option>
+                                <option value="NW">North West</option>
+                                <option value="WC">Western Cape</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Postal Code *</label>
+                            <input type="text" id="billing-postal-code" placeholder="8000" />
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn" style="width: 100%; margin-top: 40px;" onclick="completeCheckout()">Pay Now</button>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="javascript:void(0)" onclick="goToCheckoutStep(2)" class="return-link">Return to Shipping</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCheckoutStep = 1;
+
+        let checkoutData = {
+            contact: { email: '', phone: '' },
+            shippingAddress: { firstName: '', lastName: '', address: '', suburb: '', city: '', province: '', postalCode: '' },
+            billingAddress: { isSameAsShipping: true, firstName: '', lastName: '', address: '', suburb: '', city: '', province: '', postalCode: '' },
+            shippingMethod: { type: 'standard', price: 50 },
+            payment: { method: '' }
+        };
+
+        window.onload = async function() {
+            await sharedInit();
+            initCheckout();
+        };
+
+        function initCheckout() {
+            const cart = getCart();
+            if (Object.keys(cart).length === 0) {
+                window.location.href = 'shop.html';
+                return;
+            }
+            currentCheckoutStep = 1;
+            updateCheckoutSummaries();
+            renderCheckoutSummary();
+            goToCheckoutStep(1);
+        }
+
+        function renderCheckoutSummary() {
+            const container = document.getElementById('checkout-summary-items');
+            const cart = getCart();
+            let html = '';
+            let total = 0;
+
+            Object.keys(cart).forEach(productId => {
+                const product = PRODUCTS_DB.find(p => p.id === parseInt(productId));
+                if (!product) return;
+                const quantity = cart[productId];
+                const discountedPrice = getDiscountedPrice(product);
+                const finalPrice = discountedPrice || product.price;
+                const itemTotal = finalPrice * quantity;
+                const originalItemTotal = product.price * quantity;
+                total += itemTotal;
+
+                let priceHtml;
+                if (discountedPrice !== null) {
+                    priceHtml = `<div style="text-decoration: line-through; color: var(--text-muted); font-size: 11px;">R${originalItemTotal.toFixed(2)}</div><div style="font-weight: bold; font-size: 12px; color: #e74c3c;">R${itemTotal.toFixed(2)}</div>`;
+                } else {
+                    priceHtml = `<div style="font-weight: bold; font-size: 12px;">R${itemTotal.toFixed(2)}</div>`;
+                }
+
+                html += `
+                    <div class="order-summary-item">
+                        <img src="${product.images[0]}" alt="${product.name}" />
+                        <div class="order-summary-item-details">
+                            <div class="order-summary-item-name">${product.name}</div>
+                            <div class="order-summary-item-qty">Qty: ${quantity}</div>
+                        </div>
+                        <div style="text-align: right;">${priceHtml}</div>
+                    </div>
+                `;
+            });
+
+            total += 50; // shipping
+
+            html += `
+                <div style="padding: 12px 15px; border-top: 1px solid var(--border); background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px;">
+                    <span>Total</span>
+                    <span style="color: var(--accent);">R${total.toFixed(2)}</span>
+                </div>
+            `;
+
+            container.innerHTML = html;
+            document.getElementById('checkout-total').textContent = 'R' + total.toFixed(2);
+        }
+
+        function toggleOrderSummary() {
+            document.getElementById('order-summary-full').classList.toggle('hidden');
+        }
+
+        function updateCheckoutSummaries() {
+            const emailEl = document.getElementById('summary-email');
+            const phoneEl = document.getElementById('summary-phone');
+            const addressEl = document.getElementById('summary-address');
+            const emailPayEl = document.getElementById('summary-email-payment');
+            const phonePayEl = document.getElementById('summary-phone-payment');
+            const addressPayEl = document.getElementById('summary-address-payment');
+
+            const email = document.getElementById('contact-email').value || 'Email not provided';
+            const phone = document.getElementById('contact-phone').value || 'Phone not provided';
+
+            const address = [
+                document.getElementById('shipping-first-name').value,
+                document.getElementById('shipping-last-name').value,
+                document.getElementById('shipping-address').value,
+                document.getElementById('shipping-suburb').value,
+                document.getElementById('shipping-city').value,
+                document.getElementById('shipping-province').value,
+                document.getElementById('shipping-postal-code').value
+            ].filter(x => x).join(', ') || 'Address not provided';
+
+            if (emailEl) emailEl.textContent = email;
+            if (phoneEl) phoneEl.textContent = phone;
+            if (addressEl) addressEl.textContent = address;
+            if (emailPayEl) emailPayEl.textContent = email;
+            if (phonePayEl) phonePayEl.textContent = phone;
+            if (addressPayEl) addressPayEl.textContent = address;
+        }
+
+        function validateStep(stepNumber) {
+            if (stepNumber === 1) {
+                const email = document.getElementById('contact-email').value.trim();
+                const phone = document.getElementById('contact-phone').value.trim();
+                const firstName = document.getElementById('shipping-first-name').value.trim();
+                const lastName = document.getElementById('shipping-last-name').value.trim();
+                const address = document.getElementById('shipping-address').value.trim();
+                const city = document.getElementById('shipping-city').value.trim();
+                const province = document.getElementById('shipping-province').value.trim();
+                const postalCode = document.getElementById('shipping-postal-code').value.trim();
+
+                if (!email || !email.includes('@')) { alert('Please enter a valid email address'); return false; }
+                if (!phone) { alert('Please enter a phone number'); return false; }
+                if (!firstName || !lastName || !address || !city || !province || !postalCode) { alert('Please fill in all required shipping fields'); return false; }
+
+                checkoutData.contact.email = email;
+                checkoutData.contact.phone = phone;
+                checkoutData.shippingAddress.firstName = firstName;
+                checkoutData.shippingAddress.lastName = lastName;
+                checkoutData.shippingAddress.address = address;
+                checkoutData.shippingAddress.suburb = document.getElementById('shipping-suburb').value.trim();
+                checkoutData.shippingAddress.city = city;
+                checkoutData.shippingAddress.province = province;
+                checkoutData.shippingAddress.postalCode = postalCode;
+                return true;
+            } else if (stepNumber === 3) {
+                const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value;
+                if (!paymentMethod) { alert('Please select a payment method'); return false; }
+                checkoutData.payment.method = paymentMethod;
+
+                if (document.getElementById('billing-different').checked) {
+                    const bf = document.getElementById('billing-first-name').value.trim();
+                    const bl = document.getElementById('billing-last-name').value.trim();
+                    const ba = document.getElementById('billing-address').value.trim();
+                    const bc = document.getElementById('billing-city').value.trim();
+                    const bp = document.getElementById('billing-province').value.trim();
+                    const bpc = document.getElementById('billing-postal-code').value.trim();
+                    if (!bf || !bl || !ba || !bc || !bp || !bpc) { alert('Please fill in all required billing address fields'); return false; }
+                    checkoutData.billingAddress.isSameAsShipping = false;
+                    checkoutData.billingAddress.firstName = bf;
+                    checkoutData.billingAddress.lastName = bl;
+                    checkoutData.billingAddress.address = ba;
+                    checkoutData.billingAddress.suburb = document.getElementById('billing-suburb').value.trim();
+                    checkoutData.billingAddress.city = bc;
+                    checkoutData.billingAddress.province = bp;
+                    checkoutData.billingAddress.postalCode = bpc;
+                } else {
+                    checkoutData.billingAddress.isSameAsShipping = true;
+                }
+                return true;
+            }
+            return true;
+        }
+
+        function goToCheckoutStep(stepNumber) {
+            if (currentCheckoutStep < stepNumber && !validateStep(currentCheckoutStep)) return;
+
+            closeOrderSummary();
+            updateCheckoutSummaries();
+
+            document.querySelectorAll('.checkout-step').forEach(step => step.classList.add('hidden'));
+            document.getElementById('checkout-step-' + stepNumber).classList.remove('hidden');
+
+            document.querySelectorAll('.progress-step').forEach((step, idx) => {
+                step.classList.remove('active');
+                if (idx + 1 === stepNumber) step.classList.add('active');
+            });
+
+            currentCheckoutStep = stepNumber;
+            window.scrollTo(0, 0);
+        }
+
+        function closeOrderSummary() {
+            const dropdown = document.getElementById('order-summary-full');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+
+        function toggleBillingAddressForm() {
+            const container = document.getElementById('billing-form-container');
+            const isDifferent = document.getElementById('billing-different').checked;
+            if (isDifferent) { container.classList.remove('hidden'); }
+            else { container.classList.add('hidden'); }
+        }
+
+        function updatePaymentMethod(method) {
+            checkoutData.payment.method = method;
+        }
+
+        async function completeCheckout() {
+            if (!validateStep(3)) return;
+
+            const cart = getCart();
+            let orderSummary = { items: {}, subtotal: 0, shipping: 50, total: 0 };
+
+            Object.keys(cart).forEach(productId => {
+                const product = PRODUCTS_DB.find(p => p.id === parseInt(productId));
+                if (!product) return;
+                const quantity = cart[productId];
+                const discountedPrice = getDiscountedPrice(product) || product.price;
+                const itemTotal = discountedPrice * quantity;
+                orderSummary.items[product.name] = { quantity, price: discountedPrice, total: itemTotal };
+                orderSummary.subtotal += itemTotal;
+            });
+            orderSummary.total = orderSummary.subtotal + orderSummary.shipping;
+
+            try {
+                const { data: orderRow, error: orderError } = await window.supabase
+                    .from('orders')
+                    .insert({
+                        status: 'paid',
+                        subtotal: orderSummary.subtotal,
+                        shipping_cost: orderSummary.shipping,
+                        total: orderSummary.total,
+                        payment_method: checkoutData.payment.method
+                    })
+                    .select()
+                    .single();
+
+                if (orderError) throw orderError;
+
+                const customerRow = {
+                    order_id: orderRow.id,
+                    email: checkoutData.contact.email,
+                    phone: checkoutData.contact.phone,
+                    first_name: checkoutData.shippingAddress.firstName,
+                    last_name: checkoutData.shippingAddress.lastName,
+                    address: checkoutData.shippingAddress.address,
+                    suburb: checkoutData.shippingAddress.suburb,
+                    city: checkoutData.shippingAddress.city,
+                    province: checkoutData.shippingAddress.province,
+                    postal_code: checkoutData.shippingAddress.postalCode
+                };
+
+                if (!checkoutData.billingAddress.isSameAsShipping) {
+                    customerRow.billing_first_name = checkoutData.billingAddress.firstName;
+                    customerRow.billing_last_name = checkoutData.billingAddress.lastName;
+                    customerRow.billing_address = checkoutData.billingAddress.address;
+                    customerRow.billing_suburb = checkoutData.billingAddress.suburb;
+                    customerRow.billing_city = checkoutData.billingAddress.city;
+                    customerRow.billing_province = checkoutData.billingAddress.province;
+                    customerRow.billing_postal_code = checkoutData.billingAddress.postalCode;
+                }
+
+                await window.supabase.from('customer_info').insert(customerRow);
+
+                const orderItems = Object.keys(cart).map(productId => {
+                    const product = PRODUCTS_DB.find(p => p.id === parseInt(productId));
+                    if (!product) {
+                        console.error('Product not found:', productId);
+                        throw new Error('Product not found: ' + productId);
+                    }
+                    const quantity = cart[productId];
+                    return {
+                        order_id: orderRow.id,
+                        product_id: product.id,
+                        product_name: product.name,
+                        quantity: quantity,
+                        unit_price: product.price,
+                        total_price: product.price * quantity
+                    };
+                });
+
+                if (orderItems.length === 0) {
+                    throw new Error('No items in order');
+                }
+
+                await window.supabase.from('order_items').insert(orderItems);
+
+                alert('Order submitted successfully!\n\nOrder #' + orderRow.id + '\nPayment Method: ' + checkoutData.payment.method + '\nTotal: R' + orderSummary.total.toFixed(2));
+
+                // Clear cart and go home
+                localStorage.removeItem('beamworks_cart');
+                window.location.href = 'index.html';
+
+            } catch (err) {
+                console.error('Order submission error:', err);
+                console.log('Checkout Data:', checkoutData);
+                console.log('Cart:', getCart());
+                console.log('PRODUCTS_DB:', PRODUCTS_DB);
+                alert('There was an error submitting your order:\n\n' + (err.message || 'Unknown error') + '\n\nPlease check the browser console (F12) for details.');
+            }
+        }
+    </script>
+</body>
+</html>

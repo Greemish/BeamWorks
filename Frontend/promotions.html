@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On Promotion | BeamWorks</title>
+    <meta name="description" content="Check out our current promotions on premium lighting.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body>
+
+    <div class="container" style="padding-top: 140px;">
+        <button class="back-button" onclick="history.back()">← Back</button>
+        <h2 style="font-size: 2rem; margin-bottom: 10px;">On Promotion</h2>
+        <p id="promo-page-desc" style="color: var(--text-muted); font-size: 13px; margin-bottom: 40px;"></p>
+        <div id="promo-grid" class="grid product-grid"></div>
+    </div>
+
+    <script>
+        window.onload = async function() {
+            await sharedInit();
+            injectFooter();
+            renderPromotionsPage();
+        };
+
+        function renderPromotionsPage() {
+            const container = document.getElementById('promo-grid');
+            const desc = document.getElementById('promo-page-desc');
+
+            if (!ACTIVE_PROMO) {
+                desc.textContent = 'View our premium lights collection.';
+                const activeProducts = PRODUCTS_DB.filter(p => p.status !== 'sold_out');
+                container.innerHTML = activeProducts.map(p => createProductCard(p)).join('');
+                return;
+            }
+
+            // Show only selected products (even if discount is 0%)
+            const discountText = ACTIVE_PROMO.discount_percentage > 0
+                ? ACTIVE_PROMO.discount_percentage + '% off selected items!'
+                : 'Featured Collection';
+            desc.textContent = ACTIVE_PROMO.name + ' — ' + discountText;
+            const promoProducts = PRODUCTS_DB.filter(p => PROMO_PRODUCT_IDS.has(p.id) && p.status !== 'sold_out');
+            container.innerHTML = promoProducts.map(p => createProductCard(p)).join('');
+        }
+    </script>
+</body>
+</html>

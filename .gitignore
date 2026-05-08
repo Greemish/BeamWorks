@@ -1,0 +1,20 @@
+# ============================================================
+# BeamWorks — .gitignore
+# ============================================================
+
+# Environment config — contains sensitive credentials
+Frontend/env.js
+.env
+.env.local
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Node
+node_modules/
+package-lock.json

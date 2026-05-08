@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product | BeamWorks</title>
+    <meta name="description" content="View product details - BeamWorks premium lighting.">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="env.js"></script>
+    <script src="supabase-config.js"></script>
+    <script src="shared.js"></script>
+</head>
+<body>
+
+    <div class="container" style="padding-top: 120px;">
+        <div class="breadcrumb" id="details-breadcrumb"></div>
+        <button class="back-button" onclick="history.back()">← Back</button>
+        <div id="details-view" class="details-layout"></div>
+    </div>
+
+    <script>
+        // Gallery state
+        let currentProductImages = [];
+        let currentImageIndex = 0;
+
+        window.onload = async function() {
+            await sharedInit();
+            injectFooter();
+            loadProduct();
+        };
+
+        function loadProduct() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = parseInt(urlParams.get('id'));
+
+            if (!productId) {
+                window.location.href = 'shop.html';
+                return;
+            }
+
+            const p = PRODUCTS_DB.find(item => item.id === productId);
+            if (!p) {
+                window.location.href = 'shop.html';
+                return;
+            }
+
+            // Update page title
+            document.title = p.name + ' | BeamWorks';
+
+            // Update breadcrumb
+            const breadcrumb = document.getElementById('details-breadcrumb');
+            breadcrumb.innerHTML = '<a href="shop.html" style="color: var(--accent); text-decoration: none;">Collection</a>' +
+                '<span style="margin: 0 8px; color: var(--text-muted);">/</span>' +
+                '<span style="color: var(--text-muted);">' + p.name + '</span>';
+
+            // Render product details
+            const view = document.getElementById('details-view');
+            const isSoldOut = p.status === 'sold_out';
+            const discounted = getDiscountedPrice(p);
+
+            let priceHtml;
+            if (discounted !== null) {
+                priceHtml = `<p style="color: var(--text-muted); font-size: 18px; text-decoration: line-through;">R ${p.price}.00</p><p class="details-price" style="color: #e74c3c;">R ${discounted.toFixed(2)}</p>`;
+            } else {
+                priceHtml = `<p class="details-price">R ${p.price}.00</p>`;
+            }
+
+            const addToCartBtn = isSoldOut
+                ? '<button class="btn" style="width: 100%; background: #ccc; border-color: #ccc; cursor: not-allowed;" disabled>Sold Out</button>'
+                : `<button class="btn" style="width: 100%" onclick="addToCart(${p.id})">Add to Cart</button>`;
+
+            const thumbnailsHTML = p.images.map((img, idx) => `
+                <div class="gallery-thumbnail ${idx === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
+                    <img src="${img}" alt="${p.name} view ${idx + 1}">
+                </div>
+            `).join('');
+
+            view.innerHTML = `
+                <div class="details-gallery">
+                    <div class="details-img">
+                        <button class="gallery-nav gallery-nav-prev" onclick="scrollGallery(-1)">‹</button>
+                        <img id="main-product-img" src="${p.images[0]}" alt="${p.name}">
+                        <button class="gallery-nav gallery-nav-next" onclick="scrollGallery(1)">›</button>
+                    </div>
+                    <div class="gallery-thumbnails" id="thumbnails-container">
+                        ${thumbnailsHTML}
+                    </div>
+                </div>
+                <div>
+                    <p class="details-meta">Collection / ${p.category}</p>
+                    <h2 style="font-size: 3rem; margin-bottom: 10px;">${p.name}</h2>
+                    ${priceHtml}
+                    <p class="details-desc">${p.desc}</p>
+                    ${addToCartBtn}
+                    <p style="font-size: 11px; margin-top: 20px; color: var(--text-muted); text-align: center;">
+                        Free insured shipping on all premium pieces.
+                    </p>
+                </div>
+            `;
+
+            currentProductImages = p.images;
+            currentImageIndex = 0;
+        }
+
+        function scrollGallery(direction) {
+            let newIndex = currentImageIndex + direction;
+            if (newIndex < 0) newIndex = currentProductImages.length - 1;
+            if (newIndex >= currentProductImages.length) newIndex = 0;
+            currentImageIndex = newIndex;
+            changeMainImage(document.querySelectorAll('.gallery-thumbnail')[newIndex], currentProductImages[newIndex]);
+        }
+
+        function changeMainImage(thumbnail, imageSrc) {
+            document.querySelectorAll('.gallery-thumbnail').forEach(t => t.classList.remove('active'));
+            thumbnail.classList.add('active');
+            document.getElementById('main-product-img').src = imageSrc;
+            currentImageIndex = Array.from(document.querySelectorAll('.gallery-thumbnail')).indexOf(thumbnail);
+        }
+    </script>
+</body>
+</html>
