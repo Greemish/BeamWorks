@@ -38,7 +38,7 @@ function injectNav() {
                 <a href="shop.html">Collection</a>
                 <span style="position:relative; margin-left:40px; cursor:pointer;" onclick="toggleCart()">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 6h15l-1.5 9h-13z" stroke="#2C2C2C" stroke-width="2" fill="none"/>
+                        <path d="M6 6h15l-1.5 9h-13z" stroke="#f0f0f0" stroke-width="2" fill="none"/>
                         <circle cx="9" cy="21" r="1.5" fill="#D4AF37"/>
                         <circle cx="18" cy="21" r="1.5" fill="#D4AF37"/>
                     </svg>
@@ -301,8 +301,9 @@ function updateQuantity(productId, change) {
 function updateCartCount() {
     const cart = getCart();
     const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
-    const el = document.getElementById('cart-count');
-    if (el) el.textContent = totalItems;
+    // Update all cart-count elements on the page
+    const elements = document.querySelectorAll('#cart-count');
+    elements.forEach(el => el.textContent = totalItems);
 }
 
 function renderCart() {
