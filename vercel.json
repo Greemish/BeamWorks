@@ -1,4 +1,10 @@
 {
   "buildCommand": "node build-env.js",
-  "outputDirectory": "Frontend"
+  "outputDirectory": "Frontend",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/admin", "destination": "/Admin.html" },
+    { "source": "/Admin", "destination": "/Admin.html" }
+  ]
 }

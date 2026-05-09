@@ -58,7 +58,7 @@
 
             // Render product details
             const view = document.getElementById('details-view');
-            const isSoldOut = p.status === 'sold_out';
+            const status = p.status || 'available';
             const discounted = getDiscountedPrice(p);
 
             let priceHtml;
@@ -68,9 +68,19 @@
                 priceHtml = `<p class="details-price">R ${p.price}.00</p>`;
             }
 
-            const addToCartBtn = isSoldOut
-                ? '<button class="btn" style="width: 100%; background: #ccc; border-color: #ccc; cursor: not-allowed;" disabled>Sold Out</button>'
-                : `<button class="btn" style="width: 100%" onclick="addToCart(${p.id})">Add to Cart</button>`;
+            let addToCartBtn;
+            if (status === 'sold_out') {
+                addToCartBtn = '<button class="btn" style="width: 100%; background: #555; border-color: #555; cursor: not-allowed;" disabled>Sold Out</button>';
+            } else if (status === 'coming_soon') {
+                addToCartBtn = '<button class="btn" style="width: 100%; background: #2a2a2a; border-color: var(--accent); color: var(--accent); cursor: not-allowed;" disabled>Coming Soon</button>';
+            } else {
+                addToCartBtn = `<button class="btn" style="width: 100%" onclick="addToCart(${p.id})">Add to Cart</button>`;
+            }
+
+            let statusBadgeHtml = '';
+            if (status === 'almost_sold_out') {
+                statusBadgeHtml = '<p style="font-size: 11px; color: #f39c12; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">⚠ Almost Sold Out</p>';
+            }
 
             const thumbnailsHTML = p.images.map((img, idx) => `
                 <div class="gallery-thumbnail ${idx === 0 ? 'active' : ''}" onclick="changeMainImage(this, '${img}')">
@@ -93,6 +103,7 @@
                     <p class="details-meta">Collection / ${p.category}</p>
                     <h2 style="font-size: 3rem; margin-bottom: 10px;">${p.name}</h2>
                     ${priceHtml}
+                    ${statusBadgeHtml}
                     <p class="details-desc">${p.desc}</p>
                     ${addToCartBtn}
                     <p style="font-size: 11px; margin-top: 20px; color: var(--text-muted); text-align: center;">

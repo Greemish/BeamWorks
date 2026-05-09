@@ -140,7 +140,8 @@ async function loadProductsFromDB() {
                 price: parseFloat(p.price),
                 category: p.category,
                 images: sortedImgs.map(img => img.image_url),
-                status: p.status || 'active',
+                status: p.status || 'available',
+                featured: p.featured || false,
                 desc: p.description || ''
             };
         });
@@ -238,7 +239,8 @@ function getDiscountedPrice(product) {
 
 function createProductCard(p) {
     const discounted = getDiscountedPrice(p);
-    const isSoldOut = p.status === 'sold_out';
+    const status = p.status || 'available';
+    const isBlocked = status === 'sold_out' || status === 'coming_soon';
 
     let priceHtml;
     if (discounted !== null) {
@@ -247,10 +249,15 @@ function createProductCard(p) {
         priceHtml = `<span class="product-price">R ${p.price}</span>`;
     }
 
+    let badgeHtml = '';
+    if (status === 'sold_out') badgeHtml = '<div class="product-status-badge product-sold-out">Sold Out</div>';
+    else if (status === 'coming_soon') badgeHtml = '<div class="product-status-badge product-coming-soon">Coming Soon</div>';
+    else if (status === 'almost_sold_out') badgeHtml = '<div class="product-status-badge product-almost-sold-out">Almost Sold Out</div>';
+
     return `
-        <a class="product-card" href="product.html?id=${p.id}" style="${isSoldOut ? 'opacity: 0.6;' : ''}">
+        <a class="product-card" href="product.html?id=${p.id}" style="${isBlocked ? 'opacity: 0.6;' : ''}">
             <div class="product-image" style="position:relative;">
-                ${isSoldOut ? '<div class="product-sold-out">Sold Out</div>' : ''}
+                ${badgeHtml}
                 <img src="${p.images[0]}" alt="${p.name}">
             </div>
             <div class="product-info">
@@ -279,6 +286,11 @@ function saveCart(cartData) {
 }
 
 function addToCart(productId) {
+    const product = PRODUCTS_DB.find(p => p.id === productId);
+    if (product) {
+        const status = product.status || 'available';
+        if (status === 'sold_out' || status === 'coming_soon') return;
+    }
     const cart = getCart();
     cart[productId] = (cart[productId] || 0) + 1;
     saveCart(cart);

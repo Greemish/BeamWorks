@@ -40,8 +40,11 @@
 
         function renderFeatured() {
             const container = document.getElementById('featured-grid');
-            const featured = PRODUCTS_DB.filter(p => p.status !== 'sold_out');
-            container.innerHTML = featured.map(p => createProductCard(p)).join('');
+            // Show all products (not just featured=true) — hide only sold_out from shop grid
+            const visible = PRODUCTS_DB.filter(p => p.status !== 'sold_out');
+            container.innerHTML = visible.length
+                ? visible.map(p => createProductCard(p)).join('')
+                : '<p style="color:var(--text-muted); font-size:13px;">No products yet.</p>';
         }
     </script>
 </body>

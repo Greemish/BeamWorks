@@ -230,6 +230,8 @@
         .promo-product-item img { width: 40px; height: 50px; object-fit: cover; border-radius: 4px; }
         .badge-sold-out { background: #fce4ec; color: #c62828; }
         .badge-active { background: #e8f5e9; color: #2e7d32; }
+        .badge-coming-soon { background: #e3f2fd; color: #1565c0; }
+        .badge-almost-sold-out { background: #fff3e0; color: #e65100; }
 
         /* --- ORDER DETAIL MODAL --- */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; }
@@ -397,10 +399,17 @@
                         <div class="form-group">
                             <label>Status</label>
                             <select id="product-status">
-                                <option value="active">Active</option>
+                                <option value="available">Available</option>
+                                <option value="coming_soon">Coming Soon</option>
+                                <option value="almost_sold_out">Almost Sold Out</option>
                                 <option value="sold_out">Sold Out</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                        <input type="checkbox" id="product-featured" style="width:16px; height:16px; accent-color:var(--accent); cursor:pointer;" />
+                        <label for="product-featured" style="cursor:pointer; margin:0;">Featured — show on homepage</label>
                     </div>
 
                     <div class="form-group">
@@ -428,10 +437,10 @@
                 <!-- Products Table -->
                 <table class="data-table" id="products-table">
                     <thead>
-                        <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr>
+                        <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th>Featured</th><th>Actions</th></tr>
                     </thead>
                     <tbody id="products-tbody">
-                        <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -988,16 +997,20 @@
 
         const tbody = document.getElementById('products-tbody');
         if (allProducts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No products yet. Add your first product!</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No products yet. Add your first product!</td></tr>';
             return;
         }
 
         tbody.innerHTML = allProducts.map(p => {
             const sortedImages = (p.product_images || []).sort((a, b) => a.display_order - b.display_order);
             const thumb = sortedImages.length > 0 ? sortedImages[0].image_url : '';
-            const statusBadgeHtml = p.status === 'sold_out' 
-                ? '<span class="badge badge-sold-out">Sold Out</span>' 
-                : '<span class="badge badge-active">Active</span>';
+            const statusBadgeMap = {
+                available:        '<span class="badge badge-active">Available</span>',
+                coming_soon:      '<span class="badge badge-coming-soon">Coming Soon</span>',
+                almost_sold_out:  '<span class="badge badge-almost-sold-out">Almost Sold Out</span>',
+                sold_out:         '<span class="badge badge-sold-out">Sold Out</span>',
+            };
+            const statusBadgeHtml = statusBadgeMap[p.status] || statusBadgeMap['available'];
             return `
                 <tr>
                     <td>${thumb ? `<img src="${escapeHtml(thumb)}" alt="${escapeHtml(p.name)}">` : '<span style="color:var(--text-muted);">No img</span>'}</td>
@@ -1005,6 +1018,7 @@
                     <td>${escapeHtml(p.category)}</td>
                     <td>R${parseFloat(p.price).toFixed(2)}</td>
                     <td>${statusBadgeHtml}</td>
+                    <td>${p.featured ? '<span class="badge badge-active">✓</span>' : '<span style="color:var(--text-muted);">—</span>'}</td>
                     <td>
                         <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">Edit</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">Delete</button>
@@ -1022,7 +1036,8 @@
         document.getElementById('product-name').value = product ? product.name : '';
         document.getElementById('product-price').value = product ? product.price : '';
         document.getElementById('product-category').value = product ? product.category : '';
-        document.getElementById('product-status').value = product ? (product.status || 'active') : 'active';
+        document.getElementById('product-status').value = product ? (product.status || 'available') : 'available';
+        document.getElementById('product-featured').checked = product ? (product.featured || false) : false;
         document.getElementById('product-description').value = product ? (product.description || '') : '';
 
         if (product && product.product_images) {
@@ -1122,6 +1137,7 @@
         const price = parseFloat(document.getElementById('product-price').value);
         const category = document.getElementById('product-category').value;
         const status = document.getElementById('product-status').value;
+        const featured = document.getElementById('product-featured').checked;
         const description = document.getElementById('product-description').value.trim();
 
         if (!name || isNaN(price) || !category) {
@@ -1129,7 +1145,7 @@
             return;
         }
 
-        const productData = { name, price, category, status, description };
+        const productData = { name, price, category, status, featured, description };
 
         let productId;
 
@@ -1356,7 +1372,7 @@
 
         // Render product checklist
         const container = document.getElementById('promo-product-list');
-        const activeProducts = allProducts.filter(p => p.status !== 'sold_out');
+        const activeProducts = allProducts.filter(p => p.status === 'available' || p.status === 'almost_sold_out');
         if (activeProducts.length === 0) {
             container.innerHTML = '<span style="color:var(--text-muted); padding: 10px;">No active products available. Add products first.</span>';
             updateProductCount();
