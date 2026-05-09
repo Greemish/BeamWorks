@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeamWorks | Custom Lighting</title>
+    <title>BeamWorks </title>
     
     <meta name="description" content="Premium minimalist lighting for modern interiors.">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -50,7 +50,8 @@
             transition: none;
         }
         .nav-inner { display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 0.9rem; letter-spacing: 0.4em; cursor: pointer; white-space: nowrap; }
+        .logo { cursor: pointer; white-space: nowrap; height: 40px; display: flex; align-items: center; }
+        .logo img { height: 40px; width: auto; }
         .nav-links button {
             background: none; border: none; cursor: pointer;
             text-transform: uppercase; font-size: 10px; letter-spacing: 2px;
@@ -496,7 +497,7 @@
 
     <nav>
         <div class="container nav-inner">
-            <div class="logo" onclick="navigate('home')">BeamWorks</div>
+            <div class="logo" onclick="navigate('home')"><img src="./logo/logo.jpeg" alt="BeamWorks Logo" ></div>
             <div class="nav-links">
                 <button onclick="navigate('home')">Home</button>
                 <button onclick="navigate('shop')">Collection</button>
