@@ -32,7 +32,7 @@ function injectNav() {
     const nav = document.createElement('nav');
     nav.innerHTML = `
         <div class="container nav-inner">
-            <a class="logo" href="index.html">BeamWorks</a>
+            <a class="logo" href="index.html" style="height: 40px; display: flex; align-items: center;"><img src="./logo/logo.jpeg" alt="BeamWorks Logo" style="height: 40px; width: auto;"></a>
             <div class="nav-links">
                 <a href="index.html">Home</a>
                 <a href="shop.html">Collection</a>
