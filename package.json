@@ -1,0 +1,8 @@
+{
+  "name": "beamworks",
+  "version": "1.0.0",
+  "description": "BeamWorks - E-commerce Platform",
+  "scripts": {
+    "build": "node build-env.js"
+  }
+}

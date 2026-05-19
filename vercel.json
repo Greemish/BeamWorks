@@ -5,6 +5,18 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/admin", "destination": "/Admin.html" },
-    { "source": "/Admin", "destination": "/Admin.html" }
+    { "source": "/Admin", "destination": "/Admin.html" },
+    { "source": "/shop", "destination": "/shop.html" },
+    { "source": "/product", "destination": "/product.html" },
+    { "source": "/checkout", "destination": "/checkout.html" },
+    { "source": "/promotions", "destination": "/promotions.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    }
   ]
 }
