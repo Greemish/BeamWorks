@@ -2,6 +2,7 @@
   "name": "beamworks",
   "version": "1.0.0",
   "description": "BeamWorks - E-commerce Platform",
+  "type": "module",
   "scripts": {
     "build": "node build-env.js"
   }

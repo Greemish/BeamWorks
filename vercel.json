@@ -1,14 +1,13 @@
 {
   "buildCommand": "node build-env.js",
   "outputDirectory": "Frontend",
-  "cleanUrls": true,
-  "routes": [
-    { "src": "/admin/?$", "dest": "/Admin.html" },
-    { "src": "/Admin/?$", "dest": "/Admin.html" },
-    { "src": "/shop/?$", "dest": "/shop.html" },
-    { "src": "/product/?$", "dest": "/product.html" },
-    { "src": "/checkout/?$", "dest": "/checkout.html" },
-    { "src": "/promotions/?$", "dest": "/promotions.html" },
-    { "src": "/(.*)", "dest": "/$1" }
+  "rewrites": [
+    { "source": "/admin", "destination": "/api/rewrite" },
+    { "source": "/Admin", "destination": "/api/rewrite" },
+    { "source": "/shop", "destination": "/api/rewrite" },
+    { "source": "/product", "destination": "/api/rewrite" },
+    { "source": "/checkout", "destination": "/api/rewrite" },
+    { "source": "/promotions", "destination": "/api/rewrite" },
+    { "source": "/homepage", "destination": "/api/rewrite" }
   ]
 }
