@@ -1135,35 +1135,42 @@
         const id = document.getElementById('product-edit-id').value;
         const name = document.getElementById('product-name').value.trim();
         const price = parseFloat(document.getElementById('product-price').value);
-        const category_id = parseInt(document.getElementById('product-category').value);
+        const categoryValue = document.getElementById('product-category').value;
+        const category_id = categoryValue ? parseInt(categoryValue) : null;
         const status = document.getElementById('product-status').value;
         const featured = document.getElementById('product-featured').checked;
         const description = document.getElementById('product-description').value.trim();
 
-        if (!name || isNaN(price) || !category_id) {
+        // Validate all required fields
+        if (!name || isNaN(price) || !category_id || isNaN(category_id)) {
             showToast('Please fill in Name, Price and Category', 'error');
             return;
         }
 
-        // Look up category name for backwards compatibility
+        // Verify category exists
         const categoryObj = allCategories.find(c => c.id === category_id);
-        const categoryName = categoryObj ? categoryObj.name : '';
+        if (!categoryObj) {
+            showToast('Invalid category selected', 'error');
+            return;
+        }
+        const categoryName = categoryObj.name;
 
+        // Send category_id as the primary identifier
         const productData = { name, price, category_id, category: categoryName, status, featured, description };
 
         let productId;
 
         if (id) {
             // UPDATE existing product
-            const { error } = await window.window.supabase.from('products').update(productData).eq('id', id);
+            const { error } = await window.supabase.from('products').update(productData).eq('id', id);
             if (error) { showToast('Error updating: ' + error.message, 'error'); return; }
             productId = parseInt(id);
 
             // Delete old images then re-insert
-            await window.window.supabase.from('product_images').delete().eq('product_id', productId);
+            await window.supabase.from('product_images').delete().eq('product_id', productId);
         } else {
             // CREATE new product
-            const { data, error } = await window.window.supabase.from('products').insert(productData).select().single();
+            const { data, error } = await window.supabase.from('products').insert(productData).select().single();
             if (error) { showToast('Error creating: ' + error.message, 'error'); return; }
             productId = data.id;
         }
