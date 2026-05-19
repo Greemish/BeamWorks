@@ -3,8 +3,11 @@
 // Used during Vercel build process
 // ============================================================
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const envContent = `// ============================================================
 // env.js — BeamWorks Environment Configuration
@@ -24,5 +27,11 @@ window.__ENV = {
 
 const outputPath = path.join(__dirname, 'Frontend', 'env.js');
 
-fs.writeFileSync(outputPath, envContent);
-console.log('✓ env.js generated successfully from environment variables');
+try {
+  fs.writeFileSync(outputPath, envContent);
+  console.log('✓ env.js generated successfully from environment variables');
+  process.exit(0);
+} catch (error) {
+  console.error('✗ Error generating env.js:', error);
+  process.exit(1);
+}
