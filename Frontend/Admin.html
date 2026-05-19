@@ -960,7 +960,7 @@
         const select = document.getElementById('product-category');
         const currentVal = select.value;
         select.innerHTML = '<option value="">Select Category</option>' +
-            allCategories.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+            allCategories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
         if (currentVal) select.value = currentVal;
     }
 
@@ -1035,7 +1035,7 @@
         document.getElementById('product-edit-id').value = product ? product.id : '';
         document.getElementById('product-name').value = product ? product.name : '';
         document.getElementById('product-price').value = product ? product.price : '';
-        document.getElementById('product-category').value = product ? product.category : '';
+        document.getElementById('product-category').value = product ? (product.category_id || '') : '';
         document.getElementById('product-status').value = product ? (product.status || 'available') : 'available';
         document.getElementById('product-featured').checked = product ? (product.featured || false) : false;
         document.getElementById('product-description').value = product ? (product.description || '') : '';
@@ -1135,17 +1135,21 @@
         const id = document.getElementById('product-edit-id').value;
         const name = document.getElementById('product-name').value.trim();
         const price = parseFloat(document.getElementById('product-price').value);
-        const category = document.getElementById('product-category').value;
+        const category_id = parseInt(document.getElementById('product-category').value);
         const status = document.getElementById('product-status').value;
         const featured = document.getElementById('product-featured').checked;
         const description = document.getElementById('product-description').value.trim();
 
-        if (!name || isNaN(price) || !category) {
+        if (!name || isNaN(price) || !category_id) {
             showToast('Please fill in Name, Price and Category', 'error');
             return;
         }
 
-        const productData = { name, price, category, status, featured, description };
+        // Look up category name for backwards compatibility
+        const categoryObj = allCategories.find(c => c.id === category_id);
+        const categoryName = categoryObj ? categoryObj.name : '';
+
+        const productData = { name, price, category_id, category: categoryName, status, featured, description };
 
         let productId;
 
